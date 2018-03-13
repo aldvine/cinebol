@@ -86,6 +86,7 @@ DATA DIVISION.
         02 fr_idseance PIC 9(2).    
         02 fr_place PIC 9(2).    
         02 fr_montant PIC 9(2).    
+        02 fr_placeAbonne PIC 9(2).    
 
 WORKING-STORAGE SECTION.
 
@@ -140,11 +141,12 @@ WORKING-STORAGE SECTION.
     77 WidseanceR PIC 9(2).    
     77 WplaceR PIC 9(2).    
     77 WmontantR PIC 9(2).
+    77 Wplace_abonneR PIC 9(2).
     
     *> variable de la fonction ajout_seances
     77 jourok PIC 9(2).
 
-    *> variable Aldvine
+    *> variable de gestion
     77 Wchoix PIC 9(2).
     77 Wfin PIC 9(1).
     77 Wcpt PIC 9(5).
