@@ -62,7 +62,7 @@ DATA DIVISION.
     FD fsalles.
     01 salTampon.
         02 fsal_num PIC 9(2).
-        02 fsal_nbplace PIC 9(2).
+        02 fsal_nbplace PIC 9(3).
         
     FD ffilms.
     01 filmTampon.
@@ -75,7 +75,7 @@ DATA DIVISION.
     01 clieTampon.
         02 fc_mail PIC A(500).    
         02 fc_prenom PIC A(30).
-        02 fc_datedeb .
+        02 fc_datedeb.
            03 fc_jour PIC 9(2).
            03 fc_mois PIC 9(2).
            03 fc_annee PIC 9(4).
@@ -125,7 +125,7 @@ WORKING-STORAGE SECTION.
     
     *> variables du fichier salles.dat
     77 WnumS PIC 9(2).
-    77 WnbplaceS PIC 9(2).
+    77 WnbplaceS PIC 9(3).
     
     *> variables du fichier films.dat
     77 WidF PIC 9(2).
@@ -163,6 +163,8 @@ WORKING-STORAGE SECTION.
     77 Wfin PIC 9(1).
     77 Wcpt PIC 9(5).
 
+    *> variables Andy
+    77 Wtrouve PIC 9(2).
 
     
 PROCEDURE DIVISION.
@@ -214,7 +216,7 @@ PROCEDURE DIVISION.
         DISPLAY "12-Recherche réservation"
         DISPLAY "13-Affiche réservation"
         DISPLAY "14-Bénéfice journalier"
-        DISPLAY "15-Classament entrée"
+        DISPLAY "15-Classement entrée"
         DISPLAY "16-Quitter"
         ACCEPT Wmenu
         EVALUATE Wmenu
@@ -350,10 +352,57 @@ PROCEDURE DIVISION.
         DISPLAY "Suppression séance".
     
     AJOUT_SALLE.
-        DISPLAY "Ajout salle".
     
+       PERFORM WITH TEST AFTER UNTIL Wtrouve = 0
+              PERFORM WITH TEST AFTER UNTIL WnumS <> ' '
+                     DISPLAY 'Quel est le numéro de la salle à ajouter ?'
+                     ACCEPT WnumS
+              END-PERFORM
+              PERFORM WITH TEST AFTER UNTIL WnbplaceS <> ' '
+                     DISPLAY 'Quel est le nombre de places de la salle ?'
+                     ACCEPT WnbplaceS
+              END-PERFORM
+              
+              OPEN INPUT fsalles
+              MOVE 0 TO Wtrouve
+              MOVE 0 TO Wfin
+              PERFORM WITH TEST AFTER UNTIL Wfin = 1 OR Wtrouve = 1
+                     READ fsalles NEXT
+                     AT END MOVE 1 TO Wfin
+                     NOT AT END 
+                            IF WnumS = fsal_num THEN
+                                   MOVE 1 TO Wtrouve
+                            END-IF
+                     END-READ
+              END-PERFORM
+              CLOSE fsalles
+       END-PERFORM
+       MOVE WnumS TO fsal_num
+       MOVE WnbplaceS TO fsal_nbplace
+       OPEN I-O fsalles
+	WRITE salTampon
+	END-WRITE
+	CLOSE fsalles.
+       
     RECHERCHE_SALLE.
-        DISPLAY "Recherche salle".
+    
+       OPEN INPUT fsalles
+       MOVE 0 TO Wfin
+       DISPLAY 'Quel est le numéro de la salle ?'
+       ACCEPT WnumS
+       PERFORM WITH TEST AFTER UNTIL Wtrouve = 1 OR Wfin = 1
+              READ fsalles NEXT
+              AT END MOVE 1 TO Wfin
+                     DISPLAY 'Salle inexistante'
+              NOT AT END
+                     IF fsal_num = WnumS THEN
+                            MOVE 1 TO Wtrouve
+                            DISPLAY 'Numéro de la salle :', fsal_num
+                            DISPLAY 'Nombre de places de la salle :', fsal_nbplace
+                     END-IF
+              END-READ
+       END-PERFORM
+       CLOSE fsalles.
     
     AJOUT_FILM.
         DISPLAY "Ajout film".
