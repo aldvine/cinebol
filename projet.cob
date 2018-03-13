@@ -51,7 +51,7 @@ DATA DIVISION.
         02 fsea_date.
 			03 fsea_jour PIC 9(2).
 			03 fsea_mois PIC 9(2).
-			03 fsea_annee PIC 9(2).
+			03 fsea_annee PIC 9(4).
 			03 fsea_minute PIC 9(2).
 			03 fsea_heure PIC 9(2).
         02 fsea_numsalle PIC 9(2).
@@ -116,7 +116,9 @@ WORKING-STORAGE SECTION.
     77 WminuteS PIC 9(2).
     77 WheureS PIC 9(2).
     77 WjourS PIC 9(2).
-    77 WmoisS PIC 9(2).
+    01 WmoisS PIC 9(2).
+		88 moispair VALUE 4,6,8,10,12.
+		88 moisfevrier VALUE 2.
     77 WanneS PIC 9(4).
     
     *> variables du fichier salles.dat
@@ -143,6 +145,11 @@ WORKING-STORAGE SECTION.
     
     *> variable de la fonction ajout_seances
     77 jourok PIC 9(2).
+    01 dateactuel.
+		02 annee PIC 9(4).
+		02 reste PIC 9(4).
+	77 anneediv PIC 9(4).
+	77 anneedivreste PIC 9(4).
 
     *> variable Aldvine
     77 Wchoix PIC 9(2).
@@ -239,17 +246,95 @@ PROCEDURE DIVISION.
     STOP RUN.
     
     AJOUT_SEANCE.
-		DISPLAY "Veuillez saisir l'année"
-		ACCEPT WanneS
-		PERFORM WITH TEST AFTER UNTIL WmoisS < 13 AND WmoisS > 0
+		ACCEPT dateactuel FROM DATE YYYYMMDD
+		PERFORM WITH TEST AFTER UNTIL Wannes >= annee
+			DISPLAY "Veuillez saisir l'année"
+			ACCEPT WanneS
+		END-PERFORM
+		PERFORM WITH TEST AFTER UNTIL WmoisS < 13 AND > 0
 			DISPLAY "Veuillez saisir le mois"
 			ACCEPT WmoisS
 		END-PERFORM
-		PERFORM WITh TEST AFTER UNTIL jourok = 1
+		MOVE 0 TO jourok
+		PERFORM WITH TEST AFTER UNTIL jourok = 1
 			DISPLAY "Veuillez saisir le jour"
 			ACCEPT WjourS
+			IF moisfevrier THEN *>Test si le mois choisi est Février
+				DIVIDE Wannes BY 4
+				GIVING anneediv
+				REMAINDER anneedivreste
+				IF anneedivreste = 0 THEN 
+					DIVIDE Wannes BY 100
+					GIVING anneediv
+					REMAINDER anneedivreste
+					IF anneedivreste > 0 THEN
+						IF WjourS < 30 AND > 0 THEN
+							MOVE 1 TO jourok
+						ELSE
+							DISPLAY "Ce jour n'existe pas pour le mois de février de cette année"
+						END-IF
+					ELSE
+						MOVE 0 TO anneedivreste
+						DIVIDE Wannes BY 400
+						GIVING anneediv
+						REMAINDER anneedivreste
+						IF anneedivreste = 0 THEN
+							IF WjourS < 30 AND > 0 THEN
+								MOVE 1 TO jourok
+							ELSE
+								DISPLAY "Ce jour n'existe pas pour le mois de février de cette année"
+							END-IF				
+						ELSE
+							IF WjourS < 29 AND > 0 THEN
+								MOVE 1 TO jourok
+							ELSE
+								DISPLAY "Ce jour n'existe pas pour le mois de février de cette année"
+							END-IF	
+						END-IF			
+					END-IF
+				ELSE
+					MOVE 0 TO anneedivreste
+					DIVIDE Wannes BY 400
+					GIVING anneediv
+					REMAINDER anneedivreste
+					IF anneedivreste = 0 THEN
+						IF WjourS < 30 AND > 0 THEN
+							MOVE 1 TO jourok
+						ELSE
+							DISPLAY "Ce jour n'existe pas pour le mois de février de cette année"
+						END-IF				
+					ELSE
+						IF WjourS < 29 AND > 0 THEN
+							MOVE 1 TO jourok
+						ELSE
+							DISPLAY "Ce jour n'existe pas pour le mois de février de cette année"
+						END-IF	
+					END-IF
+				END-IF *> Fin du test si il s'agit du mois de février
+			ELSE 
+				IF moispair THEN
+					IF Wjours < 31 AND Wjours > 0 THEN 
+						MOVE 1 TO jourok
+					ELSE
+						DISPLAY "Ce jour n'existe pas durant ce mois"
+					END-IF
+				ELSE
+					IF Wjours < 32 AND Wjours > 0 THEN 
+						MOVE 1 TO jourok
+					ELSE
+						DISPLAY "Ce jour n'existe pas durant ce mois"
+					END-IF
+				END-IF
+			END-IF
+		END-PERFORM *> Fin des tests pour le jour
+		PERFORM WITH TEST AFTER UNTIL WheureS < 24 AND > -1
+			DISPLAY "Veuillez saisir l'heure de début de la séance"
+			ACCEPT WheureS
 		END-PERFORM
-        DISPLAY "Ajout séance".
+		PERFORM WITH TEST AFTER UNTIL WminuteS < 61 AND > -1
+			DISPLAY "Veuillez saisir la minute à laquelle commence la séance"
+			ACCEPT WminuteS
+		END-PERFORM.
         
     RECHERCHE_SEANCE.
         DISPLAY "Recherche séance".
