@@ -86,6 +86,7 @@ DATA DIVISION.
         02 fr_idseance PIC 9(2).    
         02 fr_place PIC 9(2).    
         02 fr_montant PIC 9(2).    
+        02 fr_placeAbonne PIC 9(2).   
 
 WORKING-STORAGE SECTION.
 
