@@ -52,6 +52,7 @@ DATA DIVISION.
 			03 fsea_jour PIC 9(2).
 			03 fsea_mois PIC 9(2).
 			03 fsea_annee PIC 9(4).
+		02 fsea_horaire.
 			03 fsea_minute PIC 9(2).
 			03 fsea_heure PIC 9(2).
         02 fsea_numsalle PIC 9(2).
@@ -152,6 +153,11 @@ WORKING-STORAGE SECTION.
 	77 anneediv PIC 9(4).
 	77 anneedivreste PIC 9(4).
 
+	*> variable de la fonction montant_journalier
+	77 WsommeI PIC 9(4).
+	77 WsommeS PIC 9(4).
+	77 WfinR PIC 9.
+	
     *> variable Aldvine
     77 Wchoix PIC 9(2).
     77 Wfin PIC 9(1).
@@ -192,7 +198,7 @@ PROCEDURE DIVISION.
     CLOSE fclients
     
     MOVE 0 TO Wmenu
-    PERFORM WITH TEST AFTER UNTIL Wmenu=15
+    PERFORM WITH TEST AFTER UNTIL Wmenu=16
         DISPLAY "Que voulez vous faire ?"
         DISPLAY "1-Ajouter séance"
         DISPLAY "2-Recherche séance"
@@ -534,7 +540,57 @@ PROCEDURE DIVISION.
         DISPLAY "Affiche réservation".
     
     MONTANT_JOURNALIER.
-        DISPLAY "Montant journalier".
+        DISPLAY "Saisir la date du jour sous le format JJMMYYYY"
+        ACCEPT fsea_date
+        MOVE fsea_jour TO WjourS
+        MOVE fsea_mois TO WmoisS
+        MOVE fsea_annee TO WanneS
+        OPEN INPUT fseances
+        OPEN INPUT freservation
+        START fseances key = fsea_date
+        INVALID KEY
+			DISPLAY "Aucune séance pour cette date"
+		NOT INVALID KEY
+			DISPLAY " "
+			DISPLAY "Voici la liste des séances :"
+			MOVE 1 TO Wfin
+			PERFORM WITH TEST AFTER UNTIL Wfin=1
+				READ fseances NEXT
+				AT END
+					MOVE 1 TO Wfin
+				NOT AT END
+					IF WjourS<>fsea_jour OR WmoisS<>fsea_mois OR WanneS<>fsea_annee THEN
+						MOVE 1 TO Wfin
+					ELSE
+						MOVE fsea_id TO fr_idseance
+						START freservation key = fr_idseance
+						INVALID KEY
+							DISPLAY " "
+						NOT INVALID KEY
+							MOVE 1 TO WfinR
+							MOVE 0 TO WsommeI
+							PERFORM WITH TEST AFTER UNTIL WfinR=1
+								READ freservation NEXT
+								AT END
+									MOVE 1 TO WfinR
+								NOT AT END
+									IF fr_idseance<>fsea_id THEN
+										MOVE 1 TO WfinR
+									ELSE
+										COMPUTE WsommeI = WsommeI + fr_montant
+									END-IF
+								END-READ
+							END-PERFORM
+						END-START
+						DISPLAY "Horaire: ",fsea_heure,":",fsea_minute," Montant: ",WsommeI
+					END-IF
+					COMPUTE WsommeS = WsommeS + WsommeI
+				END-READ
+			END-PERFORM
+		END-START
+		DISPLAY "Chiffre d'affaire de la journée: ",WsommeS
+		CLOSE fseances
+		CLOSE freservation.
     
     AFFICHE_STATISTIQUE.
         DISPLAY "Affiche statistique".
