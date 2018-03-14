@@ -148,6 +148,8 @@ WORKING-STORAGE SECTION.
     
     *> variable de la fonction ajout_seances
     77 jourok PIC 9(2).
+    77 dateactuel PIC 9(8).
+    77 annee PIC 9(4).
 	77 anneediv PIC 9(4).
 	77 anneedivreste PIC 9(4).
 
