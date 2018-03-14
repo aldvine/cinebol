@@ -133,7 +133,7 @@ WORKING-STORAGE SECTION.
     77 WanneeF PIC 9(2).
     
     *> variables du fichier clients.dat
-    77 WmailC PIC A(500).    
+    77 WmailC PIC A(250).    
     77 WprenomC PIC A(30).
     77 WdatedebC PIC X(15).
     77 WdureeC PIC 9(2).
@@ -157,6 +157,7 @@ WORKING-STORAGE SECTION.
     77 Wchoix PIC 9(2).
     77 Wfin PIC 9(1).
     77 Wcpt PIC 9(5).
+    77 Wdate PIC 9(8).
 
 
     
@@ -193,7 +194,7 @@ PROCEDURE DIVISION.
     CLOSE fclients
     
     MOVE 0 TO Wmenu
-    PERFORM WITH TEST AFTER UNTIL Wmenu=15
+    PERFORM WITH TEST AFTER UNTIL Wmenu=16
         DISPLAY "Que voulez vous faire ?"
         DISPLAY "1-Ajouter séance"
         DISPLAY "2-Recherche séance"
@@ -371,18 +372,10 @@ PROCEDURE DIVISION.
             Display " 1-OUI"
             ACCEPT Wchoix
             IF Wchoix=1 THEN
-               PERFORM WITH TEST AFTER UNTIL fc_jour <= 31 AND fc_jour >= 1
-                 DISPLAY "Saisir le jour du début"
-                 ACCEPT fc_jour
-               END-PERFORM
-               PERFORM WITH TEST AFTER UNTIL fc_mois <= 12 AND fc_mois >= 1
-                 DISPLAY "Saisir le mois du début"
-                 ACCEPT fc_mois
-               END-PERFORM
-               PERFORM WITH TEST AFTER UNTIL fc_annee >=2000  
-                 DISPLAY "Saisir l'année du début"
-                 ACCEPT fc_annee
-               END-PERFORM
+            MOVE 1 to Wfin
+             *> ajout de la date courante dans la variable
+                   MOVE FUNCTION CURRENT-DATE to fc_datedeb
+                 
                 PERFORM WITH TEST AFTER UNTIL fc_duree >=1  
                  DISPLAY "Saisir la durée de l'abonnement (en mois >1)"
                  ACCEPT fc_duree
@@ -405,23 +398,18 @@ PROCEDURE DIVISION.
            IF Wchoix=1 THEN
                  DISPLAY "Veuillez saisir le prenom du client"
                ACCEPT fc_prenom
-               DISPLAY "Voulez-vous ajouter un abonnement ?"
+               DISPLAY "Voulez-vous mettre à jour l'abonnement ?"
                Display " 0-NON"
                Display " 1-OUI"
                ACCEPT Wchoix
                IF Wchoix=1 THEN
-                 PERFORM WITH TEST AFTER UNTIL fc_jour <= 31 AND fc_jour >= 1
-                    DISPLAY "Saisir le jour du début"
-                    ACCEPT fc_jour
-                  END-PERFORM
-                  PERFORM WITH TEST AFTER UNTIL fc_mois <= 12 AND fc_mois >= 1
-                    DISPLAY "Saisir le mois du début"
-                    ACCEPT fc_mois
-                  END-PERFORM
-                  PERFORM WITH TEST AFTER UNTIL fc_annee >=2000  
-                    DISPLAY "Saisir l'année du début"
-                    ACCEPT fc_annee
-                  END-PERFORM
+              *> utile pour tester la date
+             *>   MOVE FUNCTION CONCATENATE(fc_annee,fc_mois,fc_jour) TO Wdate
+                *>IF FUNCTION TEST-DATE-YYYYMMDD(Wdate) = 00000001 THEN
+                
+                  *> ajout de la date courante dans la variable s'il n'y a pas de date
+                  MOVE FUNCTION CURRENT-DATE to fc_datedeb           
+               
                    PERFORM WITH TEST AFTER UNTIL fc_duree >=1  
                     DISPLAY "Saisir la durée de l'abonnement (en mois >1)"
                     ACCEPT fc_duree
