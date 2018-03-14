@@ -6,7 +6,7 @@ IDENTIFICATION DIVISION.
 ENVIRONMENT DIVISION.
 INPUT-OUTPUT SECTION.
 FILE-CONTROL.
-
+	
     SELECT fseances ASSIGN TO "seances.dat"
     ORGANIZATION indexed
     ACCESS IS dynamic
@@ -66,7 +66,7 @@ DATA DIVISION.
         
     FD ffilms.
     01 filmTampon.
-        02 ff_id PIC 9(2).
+        02 ff_id PIC 9(3).
         02 ff_titre PIC A(50).
         02 ff_genre PIC A(20).
         02 ff_annee PIC 9(2).
@@ -147,16 +147,24 @@ WORKING-STORAGE SECTION.
     
     *> variable de la fonction ajout_seances
     77 jourok PIC 9(2).
-    01 dateactuel.
-		02 annee PIC 9(4).
-		02 reste PIC 9(4).
 	77 anneediv PIC 9(4).
 	77 anneedivreste PIC 9(4).
 
 	*> variable de la fonction montant_journalier
 	77 WsommeI PIC 9(4).
 	77 WsommeS PIC 9(4).
+	77 WsommeP PIC 9(9).
 	77 WfinR PIC 9.
+	
+	*> variable de la fonction affiche_statistique
+	77 WfinF PIC 9.
+	77 WsommeE PIC 9(9).
+	77 Wi PIC 9(9).
+	77 Wcompt PIC 9(3).
+	01 Wtab.
+         02 Wcellule OCCURS 999.
+			03 WtitlefilmT PIC A(50).
+			03 WnbplaceT PIC 9(9).
 	
     *> variable Aldvine
     77 Wchoix PIC 9(2).
@@ -343,7 +351,8 @@ PROCEDURE DIVISION.
 		PERFORM WITH TEST AFTER UNTIL WminuteS < 61 AND > -1
 			DISPLAY "Veuillez saisir la minute à laquelle commence la séance"
 			ACCEPT WminuteS
-		END-PERFORM.
+		END-PERFORM
+		.
         
     RECHERCHE_SEANCE.
         DISPLAY "Recherche séance".
@@ -602,7 +611,7 @@ PROCEDURE DIVISION.
 		NOT INVALID KEY
 			DISPLAY " "
 			DISPLAY "Voici la liste des séances :"
-			MOVE 1 TO Wfin
+			MOVE 0 TO Wfin
 			PERFORM WITH TEST AFTER UNTIL Wfin=1
 				READ fseances NEXT
 				AT END
@@ -616,7 +625,7 @@ PROCEDURE DIVISION.
 						INVALID KEY
 							DISPLAY " "
 						NOT INVALID KEY
-							MOVE 1 TO WfinR
+							MOVE 0 TO WfinR
 							MOVE 0 TO WsommeI
 							PERFORM WITH TEST AFTER UNTIL WfinR=1
 								READ freservation NEXT
@@ -642,4 +651,71 @@ PROCEDURE DIVISION.
 		CLOSE freservation.
     
     AFFICHE_STATISTIQUE.
-        DISPLAY "Affiche statistique".
+		
+		INITIALIZE Wtab.
+        OPEN INPUT fseances
+        OPEN INPUT freservation
+        OPEN I-O ffilms
+        MOVE 0 TO WfinF
+        MOVE 1 TO Wcompt
+        PERFORM WITH TEST AFTER UNTIL WfinF = 1
+			READ ffilms NEXT
+			AT END
+				MOVE 1 TO WfinR
+			NOT AT END
+				MOVE ff_id TO fsea_idfilm
+				START fseances key = fsea_idfilm
+				INVALID KEY
+					MOVE 1 TO Wfin
+				NOT INVALID KEY
+					MOVE 0 TO Wfin
+					PERFORM WITH TEST AFTER UNTIL Wfin=1
+						READ fseances NEXT
+						AT END
+							MOVE 1 TO Wfin
+						NOT AT END
+							IF ff_id<>fsea_idfilm THEN
+								MOVE 1 TO Wfin
+							ELSE
+								MOVE fsea_id TO fr_idseance
+								START freservation key = fr_idseance
+								INVALID KEY
+									MOVE 0 TO WfinR
+								NOT INVALID KEY
+									MOVE 0 TO WfinR
+									MOVE 0 TO WsommeE
+									MOVE 0 TO WsommeP
+									PERFORM WITH TEST AFTER UNTIL WfinR=1
+										READ freservation NEXT
+										AT END
+											MOVE 1 TO WfinR
+										NOT AT END
+											IF fr_idseance<>fsea_id THEN
+												MOVE 1 TO WfinR
+											ELSE
+												COMPUTE WsommeP = WsommeP + fr_place
+											END-IF
+										END-READ
+									END-PERFORM
+								END-START
+							END-IF
+						END-READ
+					END-PERFORM
+				END-START
+				MOVE WsommeP TO WnbplaceT(Wcompt)
+				MOVE ff_titre TO WtitlefilmT(Wcompt)
+				COMPUTE Wcompt = Wcompt + 1
+			END-READ
+		END-PERFORM
+		
+		COMPUTE Wcompt = Wcompt - 1
+		SORT WnbplaceT DESCENDING.
+		
+		DISPLAY "Classement des films par entrée :"
+		PERFORM TEST AFTER VARYING Wi FROM 1 BY 1 UNTIL Wi = Wcompt
+			DISPLAY Wi," : ",WtitlefilmT(Wi)," avec ",WnbplaceT(Wi)
+		END-PERFORM
+		
+		CLOSE fseances
+		CLOSE freservation
+		CLOSE ffilms.
