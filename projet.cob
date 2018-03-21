@@ -180,6 +180,12 @@ WORKING-STORAGE SECTION.
     77 Wfin PIC 9(1).
     77 Wcpt PIC 9(5).
     77 Wdate PIC 9(8).
+    77 Wtampon PIC 9(8).
+    *> date en entier ( ressemble aux timestamp)
+    77 WdateInteger PIC 9(8).
+    77 WplaceRestante PIC 9(4).
+    77 Wplace_enfant PIC 9(4).
+
 
     *> variables Andy
     77 Wtrouve PIC 9(2).
@@ -232,7 +238,7 @@ PROCEDURE DIVISION.
         DISPLAY "10-liste des clients"
         DISPLAY "11-Ajout réservation"
         DISPLAY "12-Recherche réservation"
-        DISPLAY "13-Affiche réservation"
+        DISPLAY "13-Affiche réservations en cours"
         DISPLAY "14-Bénéfice journalier"
         DISPLAY "15-Classement entrée"
         DISPLAY "16-Quitter"
@@ -263,7 +269,7 @@ PROCEDURE DIVISION.
         WHEN 12
             PERFORM RECHERCHE_RESERVATION
         WHEN 13
-            PERFORM AFFICHE_RESERVATION
+            PERFORM AFFICHE_RESERVATIONS
         WHEN 14
             PERFORM MONTANT_JOURNALIER
         WHEN 15
@@ -625,13 +631,212 @@ PROCEDURE DIVISION.
       CLOSE fclients.
     
     AJOUT_RESERVATION.
-        DISPLAY "Ajout réservation".
+        DISPLAY "--------------ajout reservation--------------"
+        *> fonction qui retourne le nombre de jour depuis le 1600/12/31
+        
+
+           *> demande de la seance
+        *> saisir le numero de la reservation
+        *> verifiacation si existe deja
+        
+        *> demande du nombre de place normal
+        *> demande du nombre de place enfant
+        *> verification des places restantes 
+        *> demandes des id des abonnées et verif de leur abonenment
+        *> calcul du montant total
+        *> ecriture
+        *> affichage recap commande
+        OPEN INPUT fseances
+        
+        DISPLAY "Saisir le numéro de la séance : "
+        ACCEPT fsea_id
+        READ fseances
+           INVALID KEY 
+               DISPLAY "Aucune séance ne porte ce numéro"
+           NOT INVALID KEY 
+              OPEN I-O freservation
+              MOVE fsea_id to WidseanceR
+              MOVE 0 to Wfin
+               PERFORM WITH TEST AFTER UNTIL Wfin =1 
+                 DISPLAY "Saisir le numéro de la réservation : "
+                  ACCEPT WnumR
+                   READ freservation
+                    INVALID KEY 
+                       MOVE 1 to Wfin
+                    NOT INVALID KEY 
+                       DISPLAY "Numéro de reservation déjà existant, saisissez en un nouveau"
+                    END-READ
+               END-PERFORM
+               
+               DISPLAY "Saisir le nombre de places à commander"
+               ACCEPT WplaceR
+                 MOVE WidseanceR TO fr_idseance
+                  *> se positionner
+                START freservation key = fr_idseance
+                invalid key
+                    DISPLAY "ERREUR impossible de trouver la seance selectionner"
+                not invalid key
+                    MOVE 0 TO Wfin
+                    *> lecture sur zone indexe 
+                 MOVE 0 TO WplaceRestante
+                 PERFORM WITH TEST AFTER UNTIL Wfin =1
+                    READ freservation NEXT
+                    AT END
+                        MOVE 1 TO Wfin
+                    NOT AT END
+                        COMPUTE WnbplaceS = WnbplaceS + fr_place
+                    END-READ
+                 END-PERFORM
+                 OPEN INPUT fsalles
+                 MOVE fsea_numsalle TO fsal_num
+                 READ fsalles
+                    INVALID KEY 
+                      DISPLAY "Erreur , la seance n'as pas de salle"
+                    NOT INVALID KEY 
+                      COMPUTE WplaceRestante = fsal_nbplace - WnbplaceS
+                      MOVE 0 TO WmontantR
+                      IF WplaceR > WplaceRestante THEN
+                        PERFORM WITH TEST AFTER UNTIL Wplace_enfant <= WplaceR AND Wplace_enfant >=0
+                         DISPLAY "Saisir le nombre de places enfant "
+                         ACCEPT Wplace_enfant
+                         COMPUTE WmontantR = WmontantR + WtarifEnfant * Wplace_enfant
+                        END-PERFORM
+                        COMPUTE Wtampon = WplaceR - Wplace_enfant
+                        PERFORM WITH TEST AFTER UNTIL Wplace_abonneR <= Wtampon
+                         DISPLAY "Saisir le nombre de places abonnés inferieur ou egale à ",Wtampon
+                         ACCEPT Wplace_abonneR
+                        END-PERFORM
+                        IF fsea_typedif =1 THEN
+                          COMPUTE WmontantR = WmontantR + WplaceR * Wtarif3D
+                        END-IF
+                        MOVE 0 to Wcpt
+                        OPEN INPUT fclients
+                         PERFORM WITH TEST AFTER UNTIL Wcpt < Wplace_abonneR 
+                             COMPUTE Wcpt = Wcpt + 1
+                             DISPLAY "saisir le mail de l'abonné no ",Wcpt
+                             ACCEPT fc_mail
+                             READ fclients
+                                INVALID KEY 
+                                   DISPLAY "Abonné non existant"
+                                   DISPLAY "Tarif normal adulte s'applique"
+                                   COMPUTE WmontantR = WmontantR + WtarifAdulte
+                                 
+                                NOT INVALID KEY
+                                   *> verification de sa date d'abonnement
+                                   MOVE FUNCTION INTEGER-OF-DATE(fc_datedeb) to WdateInteger
+                                   *> ajout de 30 jour x le nombre de mois
+                                   COMPUTE WdateInteger = WdateInteger + fc_duree * 30
+                                   MOVE FUNCTION INTEGER-OF-DATE( FUNCTION CURRENT-DATE) TO Wdate
+                                   IF Wdate< WdateInteger THEN
+                                   *> abonnement encore valide
+                                      COMPUTE WmontantR = WmontantR + WtarifReduc
+                                   ELSE
+                                      DISPLAY "L'abonnement de ",fc_prenom," a expiré le tarif normal adulte s'applique"
+                                      COMPUTE WmontantR = WmontantR + WtarifAdulte
+                                   END-IF
+                            END-READ
+                         END-PERFORM
+                         CLOSE fclients
+                          MOVE WmontantR to fr_montant
+                          MOVE WplaceR to fr_place
+                          MOVE Wplace_abonneR to fr_placeAbonne
+                          MOVE WidseanceR to fr_idseance
+                          MOVE WnumR to fr_num
+      
+                         WRITE reserTampon
+                         END-WRITE
+                         IF fc_stat = 00 THEN
+                          DISPLAY "--------RECAPITULATIF RESERVATION ---------"
+                          DISPLAY " Seance no ",fsea_id
+                          DISPLAY "DATE : ",fsea_date
+                          DISPLAY "HEURE : ",fsea_horaire
+                          DISPLAY "nombre de place reserver : ",WplaceR
+                          DISPLAY "dont enfant : ",Wplace_enfant
+                          DISPLAY "montant total à payer : ",WmontantR
+                         ELSE
+                            DISPLAY "Erreur inconnue, Impossible d'enregistrer cette reservation"
+                         END-IF
+                      ELSE
+                       DISPLAY "ERREUR, il ne reste que ",WplaceRestante," places pour cette seance"
+                       DISPLAY "et vous en demandez",WplaceR
+                      END-IF
+                 END-READ
+                 CLOSE fsalles
+                END-START           
+              CLOSE freservation
+        END-READ
+       
+        CLOSE fseances
+        DISPLAY "---------------fin ajout reservation---------------".
       
     RECHERCHE_RESERVATION.
-        DISPLAY "recherche réservation".
+        DISPLAY "----------------- DEBUT recherche réservation ---------------"
+           DISPLAY "Saisir le numéro de la reservation"
+           ACCEPT fr_num
+           READ freservation
+              INVALID KEY
+              DISPLAY " Aucune reservation pour ce numéro "
+              NOT INVALID KEY
+                DISPLAY "--------RECAPITULATIF RESERVATION ---------"
+                   DISPLAY " Reservation no ",fr_num
+                   DISPLAY " Seance no ",fr_idseance
+                   DISPLAY "nombre de place reserver : ",WplaceR
+                   DISPLAY "dont enfant : ",Wplace_enfant
+                   DISPLAY "montant total à payer : ",WmontantR
+           END-READ
+
+        DISPLAY "----------------- FIN recherche réservation ---------------".
     
-    AFFICHE_RESERVATION.
-        DISPLAY "Affiche réservation".
+    AFFICHE_RESERVATIONS.
+       *> parcours squentiel du fichier seance en premier moins gourmand
+        DISPLAY "----------------- DEBUT affiche Reservations ---------------"
+        DISPLAY "----Affiche les reservations des seances du jours et celles à venir ----"
+        OPEN INPUT fseances
+        OPEN INPUT freservation
+        MOVE 0 TO Wfin
+        MOVE 0 TO Wcpt
+        PERFORM WITH TEST AFTER UNTIL Wfin =1
+            READ fseances NEXT
+                AT END 
+                 MOVE 1 TO Wfin
+                NOT AT END 
+                 COMPUTE Wcpt = Wcpt + 1
+                 *> verif de la date
+                  MOVE FUNCTION INTEGER-OF-DATE(fsea_date) to Wdate
+                  MOVE FUNCTION INTEGER-OF-DATE( FUNCTION CURRENT-DATE) TO WdateInteger
+                  IF Wdate>= WdateInteger THEN
+                    MOVE fsea_id to fr_idseance
+                      START freservation key = fr_idseance
+                          INVALID KEY
+                             DISPLAY " "
+                          NOT INVALID KEY
+                          *> affichage de la seance 
+                          DISPLAY "--- --- --- ---Seance ",fsea_id,"-- --- --- ---"
+                          DISPLAY "DATE : ",fsea_date
+                          DISPLAY "HEURE : ",fsea_horaire
+                          MOVE 0 TO Wfin
+                          PERFORM WITH TEST AFTER UNTIL Wfin=1
+                              READ freservation NEXT
+                                AT END
+                                   MOVE 1 TO Wfin
+                                NOT AT END
+                                *> affichage de toutes les reservation
+                                 DISPLAY "--- RESERVATION ",fr_num,"---"
+                                 DISPLAY "nombre de place reserver : ",WplaceR
+                                 DISPLAY "dont enfant : ",Wplace_enfant
+                                 DISPLAY "montant total à payer : ",WmontantR
+                             END-READ
+                          END-PERFORM
+                      END-START
+                  END-IF
+            END-READ
+        END-PERFORM
+        CLOSE freservation
+        CLOSE fseances
+        IF Wcpt = 0 THEN
+        DISPLAY "Aucune Reservation pour les seances du jour et celles à venir"
+        END-IF
+        DISPLAY "----------------- FIN affiche Reservations ---------------".
     
     MONTANT_JOURNALIER.
         DISPLAY "Saisir la date du jour sous le format JJMMYYYY"
