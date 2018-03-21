@@ -232,7 +232,7 @@ PROCEDURE DIVISION.
         DISPLAY "10-liste des clients"
         DISPLAY "11-Ajout réservation"
         DISPLAY "12-Recherche réservation"
-        DISPLAY "13-Affiche réservation"
+        DISPLAY "13-Affiche réservations en cours"
         DISPLAY "14-Bénéfice journalier"
         DISPLAY "15-Classement entrée"
         DISPLAY "16-Quitter"
@@ -263,7 +263,7 @@ PROCEDURE DIVISION.
         WHEN 12
             PERFORM RECHERCHE_RESERVATION
         WHEN 13
-            PERFORM AFFICHE_RESERVATION
+            PERFORM AFFICHE_RESERVATIONS
         WHEN 14
             PERFORM MONTANT_JOURNALIER
         WHEN 15
@@ -730,15 +730,68 @@ PROCEDURE DIVISION.
            ACCEPT fr_num
            READ freservation
               INVALID KEY
-              
+              DISPLAY " Aucune reservation pour ce numéro "
               NOT INVALID KEY
-
+                DISPLAY "--------RECAPITULATIF RESERVATION ---------"
+                   DISPLAY " Reservation no ",fr_num
+                   DISPLAY " Seance no ",fr_idseance
+                   DISPLAY "nombre de place reserver : ",WplaceR
+                   DISPLAY "dont enfant : ",Wplace_enfant
+                   DISPLAY "montant total à payer : ",WmontantR
            END-READ
 
         DISPLAY "----------------- FIN recherche réservation ---------------".
     
-    AFFICHE_RESERVATION.
-        DISPLAY "Affiche réservation".
+    AFFICHE_RESERVATIONS.
+       *> parcours squentiel du fichier seance en premier moins gourmand
+        DISPLAY "----------------- DEBUT affiche Reservations ---------------"
+        DISPLAY "----Affiche les reservations des seances du jours et celles à venir ----"
+        OPEN INPUT fseances
+        OPEN INPUT freservation
+        MOVE 0 TO Wfin
+        MOVE 0 TO Wcpt
+        PERFORM WITH TEST AFTER UNTIL Wfin =1
+            READ fseances NEXT
+                AT END 
+                 MOVE 1 TO Wfin
+                NOT AT END 
+                 COMPUTE Wcpt = Wcpt + 1
+                 *> verif de la date
+                  MOVE FUNCTION INTEGER-OF-DATE(fsea_date) to Wdate
+                  MOVE FUNCTION INTEGER-OF-DATE( FUNCTION CURRENT-DATE) TO WdateInteger
+                  IF Wdate>= WdateInteger THEN
+                    MOVE fsea_id to fr_idseance
+                      START freservation key = fr_idseance
+                          INVALID KEY
+                             DISPLAY " "
+                          NOT INVALID KEY
+                          *> affichage de la seance 
+                          DISPLAY "--- --- --- ---Seance ",fsea_id,"-- --- --- ---"
+                          DISPLAY "DATE : ",fsea_date
+                          DISPLAY "HEURE : ",fsea_horaire
+                          MOVE 0 TO Wfin
+                          PERFORM WITH TEST AFTER UNTIL Wfin=1
+                              READ freservation NEXT
+                                AT END
+                                   MOVE 1 TO Wfin
+                                NOT AT END
+                                *> affichage de toutes les reservation
+                                 DISPLAY "--- RESERVATION ",fr_num,"---"
+                                 DISPLAY "nombre de place reserver : ",WplaceR
+                                 DISPLAY "dont enfant : ",Wplace_enfant
+                                 DISPLAY "montant total à payer : ",WmontantR
+                             END-READ
+                          END-PERFORM
+                      END-START
+                  END-IF
+            END-READ
+        END-PERFORM
+        CLOSE freservation
+        CLOSE fseances
+        IF Wcpt = 0 THEN
+        DISPLAY "Aucune Reservation pour les seances du jour et celles à venir"
+        END-IF
+        DISPLAY "----------------- FIN affiche Reservations ---------------".
     
     MONTANT_JOURNALIER.
         DISPLAY "Saisir la date du jour sous le format JJMMYYYY"
