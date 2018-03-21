@@ -49,12 +49,12 @@ DATA DIVISION.
     01 seaTampon.
         02 fsea_id PIC 9(2).
         02 fsea_date.
-			03 fsea_jour PIC 9(2).
-			03 fsea_mois PIC 9(2).
-			03 fsea_annee PIC 9(4).
-		02 fsea_horaire.
-			03 fsea_minute PIC 9(2).
-			03 fsea_heure PIC 9(2).
+			     03 fsea_jour PIC 9(2).
+			     03 fsea_mois PIC 9(2).
+			     03 fsea_annee PIC 9(4).
+		    02 fsea_horaire.
+			     03 fsea_minute PIC 9(2).
+			     03 fsea_heure PIC 9(2).
         02 fsea_numsalle PIC 9(2).
         02 fsea_idfilm PIC 9(2).			
         02 fsea_typedif PIC 9.
@@ -118,9 +118,7 @@ WORKING-STORAGE SECTION.
     77 WminuteS PIC 9(2).
     77 WheureS PIC 9(2).
     77 WjourS PIC 9(2).
-    01 WmoisS PIC 9(2).
-		88 moispair VALUE 4,6,8,10,12.
-		88 moisfevrier VALUE 2.
+    77 WmoisS PIC 9(2).
     77 WanneS PIC 9(4).
     
     *> variables du fichier salles.dat
@@ -147,12 +145,20 @@ WORKING-STORAGE SECTION.
     77 Wplace_abonneR PIC 9(2).
     
     *> variable de la fonction ajout_seances
-    77 jourok PIC 9(2).
-    77 dateactuel PIC 9(8).
-    77 annee PIC 9(4).
-	77 anneediv PIC 9(4).
-	77 anneedivreste PIC 9(4).
-
+    77 Wanneeok PIC 9(2).
+    01 WdateActu.
+    	02 Wannee PIC 9(4).
+    	02 Wmois PIC 9(2).
+      02 Wjour PIC 9(2).
+      02 Wheure PIC 9(2).
+      02 Wminute PIC 9(2).
+      02 Wseconde PIC 9(2).
+      02 Wmillisecond PIC 9(2).
+    77 Wseanceok PIC 9(2).
+    77 Widfilmok PIC 9(2).
+    77 WidSalleok PIC 9(2).
+    77 WidSeanceok PIC 9(2).
+ 		
 	*> variable de la fonction montant_journalier
 	77 WsommeI PIC 9(4).
 	77 WsommeS PIC 9(4).
@@ -267,97 +273,136 @@ PROCEDURE DIVISION.
     STOP RUN.
     
     AJOUT_SEANCE.
-		ACCEPT dateactuel FROM DATE YYYYMMDD
-		PERFORM WITH TEST AFTER UNTIL Wannes >= annee
-			DISPLAY "Veuillez saisir l'année"
-			ACCEPT WanneS
-		END-PERFORM
-		PERFORM WITH TEST AFTER UNTIL WmoisS < 13 AND > 0
-			DISPLAY "Veuillez saisir le mois"
-			ACCEPT WmoisS
-		END-PERFORM
-		MOVE 0 TO jourok
-		PERFORM WITH TEST AFTER UNTIL jourok = 1
-			DISPLAY "Veuillez saisir le jour"
-			ACCEPT WjourS
-			IF moisfevrier THEN *>Test si le mois choisi est Février
-				DIVIDE Wannes BY 4
-				GIVING anneediv
-				REMAINDER anneedivreste
-				IF anneedivreste = 0 THEN 
-					DIVIDE Wannes BY 100
-					GIVING anneediv
-					REMAINDER anneedivreste
-					IF anneedivreste > 0 THEN
-						IF WjourS < 30 AND > 0 THEN
-							MOVE 1 TO jourok
-						ELSE
-							DISPLAY "Ce jour n'existe pas pour le mois de février de cette année"
-						END-IF
-					ELSE
-						MOVE 0 TO anneedivreste
-						DIVIDE Wannes BY 400
-						GIVING anneediv
-						REMAINDER anneedivreste
-						IF anneedivreste = 0 THEN
-							IF WjourS < 30 AND > 0 THEN
-								MOVE 1 TO jourok
-							ELSE
-								DISPLAY "Ce jour n'existe pas pour le mois de février de cette année"
-							END-IF				
-						ELSE
-							IF WjourS < 29 AND > 0 THEN
-								MOVE 1 TO jourok
-							ELSE
-								DISPLAY "Ce jour n'existe pas pour le mois de février de cette année"
-							END-IF	
-						END-IF			
-					END-IF
-				ELSE
-					MOVE 0 TO anneedivreste
-					DIVIDE Wannes BY 400
-					GIVING anneediv
-					REMAINDER anneedivreste
-					IF anneedivreste = 0 THEN
-						IF WjourS < 30 AND > 0 THEN
-							MOVE 1 TO jourok
-						ELSE
-							DISPLAY "Ce jour n'existe pas pour le mois de février de cette année"
-						END-IF				
-					ELSE
-						IF WjourS < 29 AND > 0 THEN
-							MOVE 1 TO jourok
-						ELSE
-							DISPLAY "Ce jour n'existe pas pour le mois de février de cette année"
-						END-IF	
-					END-IF
-				END-IF *> Fin du test si il s'agit du mois de février
-			ELSE 
-				IF moispair THEN
-					IF Wjours < 31 AND Wjours > 0 THEN 
-						MOVE 1 TO jourok
-					ELSE
-						DISPLAY "Ce jour n'existe pas durant ce mois"
-					END-IF
-				ELSE
-					IF Wjours < 32 AND Wjours > 0 THEN 
-						MOVE 1 TO jourok
-					ELSE
-						DISPLAY "Ce jour n'existe pas durant ce mois"
+        MOVE FUNCTION CURRENT-DATE to WdateActu
+        MOVE 0 TO Wanneeok
+        PERFORM WITH TEST AFTER UNTIL Wanneeok = 1   
+			PERFORM WITH TEST AFTER UNTIL Wannes >= Wannee
+				DISPLAY "Veuillez saisir l'année"
+				ACCEPT WanneS
+			END-PERFORM
+			PERFORM WITH TEST AFTER UNTIL WmoisS < 13 AND > 0
+				DISPLAY "Veuillez saisir le mois"
+				ACCEPT WmoisS
+				IF Wannes = Wannee THEN
+					IF WmoisS < Wmois THEN
+						MOVE 13 TO WmoisS
+						DISPLAY "Ce mois est déja passé"
 					END-IF
 				END-IF
-			END-IF
-		END-PERFORM *> Fin des tests pour le jour
+			END-PERFORM
+			PERFORM WITH TEST AFTER UNTIL Wjours > 0 AND < 32
+				DISPLAY "Veuillez saisir le jour"
+				ACCEPT WjourS
+				IF Wannes = Wannee THEN
+					IF WmoisS = Wmois THEN
+						IF WjourS < Wjour THEN
+							MOVE 32 TO WjourS
+							DISPLAY "Ce jour est déja passé"
+						END-IF
+					END-IF
+				END-IF
+			END-PERFORM 
+			MOVE FUNCTION CONCATENATE(Wannes,WmoisS,WjourS) TO Wdate
+        	IF FUNCTION TEST-DATE-YYYYMMDD(Wdate) = 00000000 THEN
+        		MOVE 1 TO Wanneeok
+        	ELSE
+        		DISPLAY "La date saisie n'est pas correcte"
+        	END-IF
+    END-PERFORM
 		PERFORM WITH TEST AFTER UNTIL WheureS < 24 AND > -1
 			DISPLAY "Veuillez saisir l'heure de début de la séance"
 			ACCEPT WheureS
+			IF Wannes = Wannee THEN
+				IF WmoisS = Wmois THEN
+					IF WjourS = Wjour THEN
+						IF WheureS < Wheure THEN
+							MOVE 24 TO WheureS
+							DISPLAY "Cette heure est déja passée"
+						END-IF
+					END-IF
+				END-IF
+			END-IF
 		END-PERFORM
 		PERFORM WITH TEST AFTER UNTIL WminuteS < 61 AND > -1
 			DISPLAY "Veuillez saisir la minute à laquelle commence la séance"
 			ACCEPT WminuteS
+			IF Wannes = Wannee THEN
+				IF WmoisS = Wmois THEN
+					IF WjourS = Wjour THEN
+						IF WheureS = Wheure THEN
+							IF WminuteS < Wminute THEN
+								MOVE 61 TO WminuteS
+								DISPLAY "Cet horaire est déja passé"
+							END-IF
+						END-IF
+					END-IF
+				END-IF
+			END-IF
 		END-PERFORM
-		.
-        
+    MOVE 0 TO Wseanceok
+    MOVE 0 TO Widfilmok
+    MOVE 0 TO WidSalleok
+    MOVE 0 TO WidSeanceok
+    PERFORM WITH TEST AFTER UNTIL Wseanceok = 1
+      OPEN INPUT ffilms
+      PERFORM WITH TEST AFTER UNTIL Widfilmok = 1
+        DISPLAY "Veuillez saisir l'id du film"
+        ACCEPT WidfilmS
+        MOVE WidfilmS TO ff_id
+        START ffilms key = ff_id
+          INVALID KEY
+            DISPLAY "Ce film n'existe pas"
+          NOT INVALID KEY
+            MOVE 1 TO Widfilmok
+        END-START
+      CLOSE ffilms
+      END-PERFORM
+      OPEN INPUT fsalles
+      PERFORM WITH TEST AFTER UNTIL WidSalleok = 1
+        DISPLAY "Veuillez saisir l'id de la salle"
+        ACCEPT WnumsalleS
+        MOVE WnumsalleS TO WidS
+        START ffilms key = ff_id
+          INVALID KEY
+            DISPLAY "Cette salle n'existe pas"
+          NOT INVALID KEY
+            MOVE 1 TO WidSalleok
+        END-START
+      END-PERFORM
+      CLOSE fsalles
+      PERFORM WITH TEST AFTER UNTIL WtypedifS = 0 OR = 1
+        DISPLAY "Veuillez saisir si la séance est de type 3D (0 pour non 1 pour oui)"
+        ACCEPT WtypedifS
+      END-PERFORM
+      PERFORM WITH TEST AFTER UNTIL WidSeanceok = 1
+        DISPLAY "Veuillez saisir l'id de la séance"
+        ACCEPT WidS
+        OPEN INPUT fseances
+        MOVE WidS TO fsea_id
+        START fseances key = fsea_id
+          INVALID KEY
+            MOVE 1 TO WidSeanceok
+          NOT INVALID KEY
+            DISPLAY "Cet id de séance existe déja"
+        END-START
+          MOVE WnumsalleS TO fsea_numsalle
+          MOVE Wdate TO fsea_date
+          MOVE FUNCTION CONCATENATE(Wheure,Wminute) TO fsea_horaire
+          START fseances KEY = fsea_numsalle
+            INVALID KEY
+            NOT INVALID KEY
+              IF Wdate = fsea_date THEN
+                IF Wheure - fsea_heure < 3 AND >= 0 OR fsea_heure - Wheure < 3 AND >= 0 THEN
+                  DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+                END-IF
+              END-IF
+          END-START
+        NOT INVALID KEY
+          DISPLAY "Ce numéro de séance est déja utilisé"
+      END-START
+
+    END-PERFORM.
+
     RECHERCHE_SEANCE.
         DISPLAY "Recherche séance".
     
@@ -368,9 +413,9 @@ PROCEDURE DIVISION.
     
        PERFORM WITH TEST AFTER UNTIL Wtrouve = 0
               PERFORM WITH TEST AFTER UNTIL WnumS <> ' '
-                     DISPLAY 'Quel est le numéro de la salle à ajouter ?'
+                     DISPLAY 'Quel est le numéro de la salle à ajouter ?'			
                      ACCEPT WnumS
-              END-PERFORM
+              end-perform
               PERFORM WITH TEST AFTER UNTIL WnbplaceS <> ' '
                      DISPLAY 'Quel est le nombre de places de la salle ?'
                      ACCEPT WnbplaceS
