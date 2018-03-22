@@ -158,6 +158,9 @@ WORKING-STORAGE SECTION.
     77 Widfilmok PIC 9(2).
     77 WidSalleok PIC 9(2).
     77 WidSeanceok PIC 9(2).
+    77 Wheureavant PIC 9(2).
+    77 Wheureapres PIC 9(2).
+    77 WfinSeance PIC 9(2).
  		
 	*> variable de la fonction montant_journalier
 	77 WsommeI PIC 9(4).
@@ -380,34 +383,84 @@ PROCEDURE DIVISION.
         DISPLAY "Veuillez saisir si la séance est de type 3D (0 pour non 1 pour oui)"
         ACCEPT WtypedifS
       END-PERFORM
+      OPEN INPUT fseances
       PERFORM WITH TEST AFTER UNTIL WidSeanceok = 1
         DISPLAY "Veuillez saisir l'id de la séance"
         ACCEPT WidS
-        OPEN INPUT fseances
         MOVE WidS TO fsea_id
         START fseances key = fsea_id
           INVALID KEY
             MOVE 1 TO WidSeanceok
           NOT INVALID KEY
-            DISPLAY "Cet id de séance existe déja"
+            DISPLAY "Ce numéro de séance est déja utilisé"
         END-START
-          MOVE WnumsalleS TO fsea_numsalle
-          MOVE Wdate TO fsea_date
-          MOVE FUNCTION CONCATENATE(Wheure,Wminute) TO fsea_horaire
-          START fseances KEY = fsea_numsalle
-            INVALID KEY
-            NOT INVALID KEY
-              IF Wdate = fsea_date THEN
-                IF Wheure - fsea_heure < 3 AND >= 0 OR fsea_heure - Wheure < 3 AND >= 0 THEN
-                  DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
-                END-IF
-              END-IF
-          END-START
+      END-PERFORM
+      CLOSE fseances
+      OPEN INPUT fseances
+      MOVE WnumsalleS TO fsea_numsalle
+      MOVE Wdate TO fsea_date
+      MOVE FUNCTION CONCATENATE(Wheure,Wminute) TO fsea_horaire
+      START fseances KEY = fsea_numsalle
+        INVALID KEY 
+          MOVE 1 TO Wseanceok
         NOT INVALID KEY
-          DISPLAY "Ce numéro de séance est déja utilisé"
+          IF Wdate = fsea_date THEN
+            MOVE Wheure TO Wheureavant
+            SUBTRACT fsea_heure FROM Wheureavant
+            IF Wheure < 3 AND >= 0 
+              DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+            ELSE
+              MOVE fsea_heure TO Wheureapres
+              SUBTRACT Wheure FROM Wheureapres
+              IF Wheureapres < 3 AND >= 0 THEN
+               DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+              ELSE
+                MOVE 1 TO Wseanceok 
+              END-IF
+            END-IF
+          END-IF
       END-START
-
-    END-PERFORM.
+      MOVE 0 TO WfinSeance
+      MOVE 1 TO Wseanceok
+      PERFORM WITH TEST AFTER UNTIL WfinSeance = 1
+      READ fsalles NEXT
+        AT END 
+          MOVE 1 TO WfinSeance
+        NOT AT END 
+          IF Wdate = fsea_date THEN
+            MOVE Wheure TO Wheureavant
+            SUBTRACT fsea_heure FROM Wheureavant
+            IF Wheure < 3 AND >= 0 
+              DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+              MOVE 1 TO WfinSeance
+              MOVE 0 TO Wseanceok 
+            ELSE
+              MOVE fsea_heure TO Wheureapres
+              SUBTRACT Wheure FROM Wheureapres
+              IF Wheureapres < 3 AND >= 0 THEN
+                DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+                MOVE 1 TO WfinSeance
+                MOVE 0 TO Wseanceok 
+              END-IF
+            END-IF
+          END-IF
+      END-READ
+      END-PERFORM
+      CLOSE fseances
+    END-PERFORM
+    MOVE WidS  TO fsea_id
+    MOVE WjourS TO fsea_jour
+    MOVE WmoisS TO fsea_mois
+    MOVE WanneS TO fsea_annee
+    MOVE WminuteS TO fsea_minute
+    MOVE WheureS TO fsea_heure
+    MOVE WnumsalleS TO fsea_numsalle
+    MOVE WidfilmS TO fsea_idfilm
+    MOVE WtypedifS TO fsea_typedif
+    OPEN I-O fseances
+    WRITE seaTampon
+    CLOSE fseances
+    DISPLAY "Seance ajoutée".
 
     RECHERCHE_SEANCE.
         DISPLAY "Recherche séance".
