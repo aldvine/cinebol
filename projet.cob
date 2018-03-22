@@ -69,7 +69,7 @@ DATA DIVISION.
         02 ff_id PIC 9(3).
         02 ff_titre PIC A(50).
         02 ff_genre PIC A(20).
-        02 ff_annee PIC 9(2).
+        02 ff_annee PIC 9(4).
 
     FD fclients.
     01 clieTampon.
@@ -522,10 +522,66 @@ PROCEDURE DIVISION.
        CLOSE fsalles.
     
     AJOUT_FILM.
-        DISPLAY "Ajout film".
+		MOVE 0 TO Wtrouve
+		PERFORM WITH TEST AFTER UNTIL Wtrouve = 1
+			PERFORM WITH TEST AFTER UNTIL WidF <> ' '
+				DISPLAY 'Quel est le numéro du film à ajouter ?'
+				ACCEPT WidF
+			END-PERFORM
+			OPEN I-O ffilms
+			MOVE WidF TO ff_id
+			START ffilms key = ff_id
+			INVALID KEY
+				MOVE 1 TO Wtrouve
+				PERFORM WITH TEST AFTER UNTIL ff_titre <> ' '
+                     DISPLAY 'Quel est le titre du film ?'
+                     ACCEPT ff_titre
+				END-PERFORM
+				PERFORM WITH TEST AFTER UNTIL ff_genre <> ' '
+                     DISPLAY 'Quel est le genre du film ?'
+                     ACCEPT ff_genre
+				END-PERFORM
+				PERFORM WITH TEST AFTER UNTIL ff_annee <> ' '
+                     DISPLAY 'En quel année est sorti le film ?'
+                     ACCEPT ff_annee
+				END-PERFORM
+			NOT INVALID KEY
+				DISPLAY "id du film déjà pris"
+            END-START
+       END-PERFORM
+	   WRITE filmTampon END-WRITE
+	   IF ff_stat <> 0 THEN
+			DISPLAY "Erreur enregistrement : ",ff_stat
+	   END-IF
+	   CLOSE ffilms.
     
     RECHERCHE_FILM.
-        DISPLAY "Recherche film".
+		OPEN INPUT ffilms
+		DISPLAY "Saisir le genre du film recherché"
+		ACCEPT WgenreF
+		DISPLAY "--------------------------------"
+		MOVE 0 TO WfinF
+		MOVE 1 TO Wcpt
+		PERFORM WITH TEST AFTER UNTIL WfinF = 1
+			READ ffilms NEXT
+			AT END
+				MOVE 1 TO WfinF
+			NOT AT END
+				IF ff_genre = WgenreF THEN
+					MOVE 0 TO Wcpt
+					DISPLAY "id film : ", ff_id
+					DISPLAY "titre : ", ff_titre
+					DISPLAY "genre : ", ff_genre
+					DISPLAY "année : ", ff_annee
+					DISPLAY "--------------------------------"
+				END-IF
+			END-READ
+		END-PERFORM
+		IF Wcpt = 1 THEN
+			DISPLAY "Aucun film trouvé"
+			DISPLAY "--------------------------------"
+		END-IF
+		CLOSE ffilms.
     
     AJOUT_CLIENT.
     
@@ -955,7 +1011,7 @@ PROCEDURE DIVISION.
         PERFORM WITH TEST AFTER UNTIL WfinF = 1
 			READ ffilms NEXT
 			AT END
-				MOVE 1 TO WfinR
+				MOVE 1 TO WfinF
 			NOT AT END
 				MOVE ff_id TO fsea_idfilm
 				START fseances key = fsea_idfilm
