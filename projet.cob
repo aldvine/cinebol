@@ -318,7 +318,7 @@ PROCEDURE DIVISION.
         		DISPLAY "La date saisie n'est pas correcte"
         	END-IF
     END-PERFORM
-		PERFORM WITH TEST AFTER UNTIL WheureS < 24 AND > -1
+		PERFORM WITH TEST AFTER UNTIL WheureS < 23 AND > 9
 			DISPLAY "Veuillez saisir l'heure de début de la séance"
 			ACCEPT WheureS
 			IF Wannes = Wannee THEN
@@ -370,8 +370,8 @@ PROCEDURE DIVISION.
       PERFORM WITH TEST AFTER UNTIL WidSalleok = 1
         DISPLAY "Veuillez saisir l'id de la salle"
         ACCEPT WnumsalleS
-        MOVE WnumsalleS TO WidS
-        START ffilms key = ff_id
+        MOVE WnumsalleS TO fsal_num
+        START fsalles key = fsal_num
           INVALID KEY
             DISPLAY "Cette salle n'existe pas"
           NOT INVALID KEY
@@ -400,11 +400,14 @@ PROCEDURE DIVISION.
       MOVE WnumsalleS TO fsea_numsalle
       MOVE Wdate TO fsea_date
       MOVE FUNCTION CONCATENATE(Wheure,Wminute) TO fsea_horaire
-      START fseances KEY = fsea_numsalle
-        INVALID KEY 
+      MOVE 0 TO WfinSeance
+      START fseances KEY = fsea_date
+        INVALID KEY
+          DISPLAY "Pas d'autre date trouvée"
+          MOVE 1 TO WfinSeance
           MOVE 1 TO Wseanceok
         NOT INVALID KEY
-          IF Wdate = fsea_date THEN
+          IF WnumsalleS = fsea_numsalle THEN
             MOVE Wheure TO Wheureavant
             SUBTRACT fsea_heure FROM Wheureavant
             IF Wheure < 3 AND >= 0 
@@ -420,14 +423,13 @@ PROCEDURE DIVISION.
             END-IF
           END-IF
       END-START
-      MOVE 0 TO WfinSeance
       MOVE 1 TO Wseanceok
       PERFORM WITH TEST AFTER UNTIL WfinSeance = 1
       READ fsalles NEXT
         AT END 
           MOVE 1 TO WfinSeance
         NOT AT END 
-          IF Wdate = fsea_date THEN
+          IF WnumsalleS = fsea_numsalle THEN
             MOVE Wheure TO Wheureavant
             SUBTRACT fsea_heure FROM Wheureavant
             IF Wheure < 3 AND >= 0 
