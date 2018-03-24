@@ -398,9 +398,12 @@ PROCEDURE DIVISION.
       CLOSE fseances
       OPEN INPUT fseances
       MOVE WnumsalleS TO fsea_numsalle
-      MOVE Wdate TO fsea_date
+      MOVE WjourS TO fsea_jour
+      MOVE WmoisS TO fsea_mois
+      MOVE WanneS TO fsea_annee
       MOVE FUNCTION CONCATENATE(Wheure,Wminute) TO fsea_horaire
       MOVE 0 TO WfinSeance
+      DISPLAY fsea_date
       START fseances KEY = fsea_date
         INVALID KEY
           DISPLAY "Pas d'autre date trouvée"
@@ -412,13 +415,15 @@ PROCEDURE DIVISION.
             SUBTRACT fsea_heure FROM Wheureavant
             IF Wheure < 3 AND >= 0 
               DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+              MOVE 1 TO WfinSeance
+              MOVE 0 TO Wseanceok
             ELSE
               MOVE fsea_heure TO Wheureapres
               SUBTRACT Wheure FROM Wheureapres
               IF Wheureapres < 3 AND >= 0 THEN
-               DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
-              ELSE
-                MOVE 1 TO Wseanceok 
+                DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+                MOVE 1 TO WfinSeance
+                MOVE 0 TO Wseanceok
               END-IF
             END-IF
           END-IF
@@ -461,8 +466,13 @@ PROCEDURE DIVISION.
     MOVE WtypedifS TO fsea_typedif
     OPEN I-O fseances
     WRITE seaTampon
+    END-WRITE
     CLOSE fseances
-    DISPLAY "Seance ajoutée".
+    IF fsea_stat = 00 THEN
+      DISPLAY "Seance ajoutée"
+    ELSE 
+      DISPLAY fsea_stat
+    END-IF.
 
     RECHERCHE_SEANCE.
         DISPLAY "Recherche séance".
