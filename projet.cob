@@ -12,7 +12,7 @@ FILE-CONTROL.
     ACCESS IS dynamic
     RECORD KEY fsea_id
     ALTERNATE RECORD KEY fsea_date WITH DUPLICATES
-    ALTERNATE RECORD KEY fsea_idfilm
+    ALTERNATE RECORD KEY fsea_idfilm WITH DUPLICATES
     FILE STATUS IS fsea_stat.
     
     SELECT fsalles ASSIGN TO "salles.dat"
@@ -403,6 +403,7 @@ PROCEDURE DIVISION.
       MOVE WanneS TO fsea_annee
       MOVE FUNCTION CONCATENATE(Wheure,Wminute) TO fsea_horaire
       MOVE 0 TO WfinSeance
+      MOVE 1 TO Wseanceok
       DISPLAY fsea_date
       START fseances KEY = fsea_date
         INVALID KEY
@@ -412,47 +413,47 @@ PROCEDURE DIVISION.
         NOT INVALID KEY
           IF WnumsalleS = fsea_numsalle THEN
             MOVE Wheure TO Wheureavant
-            SUBTRACT fsea_heure FROM Wheureavant
-            IF Wheure < 3 AND >= 0 
+            SUBTRACT fsea_heure FROM Wheureavant GIVING Wheureavant
+            IF Wheureavant < 3 AND > 0 
               DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
               MOVE 1 TO WfinSeance
               MOVE 0 TO Wseanceok
             ELSE
               MOVE fsea_heure TO Wheureapres
-              SUBTRACT Wheure FROM Wheureapres
-              IF Wheureapres < 3 AND >= 0 THEN
+              SUBTRACT Wheure FROM Wheureapres GIVING Wheureapres
+              IF Wheureapres < 3 AND > 0 THEN
                 DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
                 MOVE 1 TO WfinSeance
                 MOVE 0 TO Wseanceok
               END-IF
             END-IF
           END-IF
-      END-START
-      MOVE 1 TO Wseanceok
-      PERFORM WITH TEST AFTER UNTIL WfinSeance = 1
-      READ fsalles NEXT
-        AT END 
-          MOVE 1 TO WfinSeance
-        NOT AT END 
-          IF WnumsalleS = fsea_numsalle THEN
-            MOVE Wheure TO Wheureavant
-            SUBTRACT fsea_heure FROM Wheureavant
-            IF Wheure < 3 AND >= 0 
-              DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+        PERFORM WITH TEST AFTER UNTIL WfinSeance = 1
+          DISPLAY "Rentré dans la boucle"
+          READ fseances NEXT
+            AT END 
               MOVE 1 TO WfinSeance
-              MOVE 0 TO Wseanceok 
-            ELSE
-              MOVE fsea_heure TO Wheureapres
-              SUBTRACT Wheure FROM Wheureapres
-              IF Wheureapres < 3 AND >= 0 THEN
-                DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
-                MOVE 1 TO WfinSeance
-                MOVE 0 TO Wseanceok 
+            NOT AT END 
+              IF WnumsalleS = fsea_numsalle THEN
+                MOVE Wheure TO Wheureavant
+                SUBTRACT fsea_heure FROM Wheureavant
+                IF Wheure < 3 AND > 0 
+                  DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+                  MOVE 1 TO WfinSeance
+                  MOVE 0 TO Wseanceok 
+                ELSE
+                  MOVE fsea_heure TO Wheureapres
+                  SUBTRACT Wheure FROM Wheureapres
+                  IF Wheureapres < 3 AND > 0 THEN
+                    DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+                    MOVE 1 TO WfinSeance
+                    MOVE 0 TO Wseanceok 
+                  END-IF
+                END-IF
               END-IF
-            END-IF
-          END-IF
-      END-READ
-      END-PERFORM
+          END-READ
+        END-PERFORM
+      END-START
       CLOSE fseances
     END-PERFORM
     MOVE WidS  TO fsea_id
