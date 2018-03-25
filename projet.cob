@@ -146,7 +146,7 @@ WORKING-STORAGE SECTION.
     
     *> variable de la fonction ajout_seances
     77 Wanneeok PIC 9(2).
-    01 WdateActu.
+    01 WdateActu. *> utilisé dans recherche_seance aussi
     	02 Wannee PIC 9(4).
     	02 Wmois PIC 9(2).
       02 Wjour PIC 9(2).
@@ -161,6 +161,19 @@ WORKING-STORAGE SECTION.
     77 Wheureavant PIC 9(2).
     77 Wheureapres PIC 9(2).
     77 WfinSeance PIC 9(2).
+
+    *> variable de la fonction recherche_seances
+    77 Wchoixcritere PIC 9(2).
+    01 Wdaterecherche.
+      02 Wjourrecherche PIC 9(2).
+      02 Wmoisrecherche PIC 9(2).
+      02 Wanneerecherche PIC 9(4).
+    77 Wtitrerecherche PIC A(50).
+    77 Wfinseancerecherche PIC 9(2).
+    77 Wfinfilmrecherche PIC 9(2).
+    77 Wdaterechercheok PIC 9(2).
+    77 Wgenrerecherche PIC A(20).
+    77 Widfilmrecherche PIC 9(2).
  		
 	*> variable de la fonction montant_journalier
 	77 WsommeI PIC 9(4).
@@ -408,21 +421,20 @@ PROCEDURE DIVISION.
       DISPLAY fsea_date
       START fseances KEY = fsea_date
         INVALID KEY
-          DISPLAY "Pas d'autre date trouvée"
           MOVE 1 TO WfinSeance
           MOVE 1 TO Wseanceok
         NOT INVALID KEY
           IF WnumsalleS = fsea_numsalle THEN
             MOVE Wheure TO Wheureavant
             SUBTRACT fsea_heure FROM Wheureavant GIVING Wheureavant
-            IF Wheureavant < 3 AND > 0 
+            IF Wheureavant < 3 AND >= 0 THEN
               DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
               MOVE 1 TO WfinSeance
               MOVE 0 TO Wseanceok
             ELSE
               MOVE fsea_heure TO Wheureapres
               SUBTRACT Wheure FROM Wheureapres GIVING Wheureapres
-              IF Wheureapres < 3 AND > 0 THEN
+              IF Wheureapres < 3 AND >= 0 THEN
                 DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
                 MOVE 1 TO WfinSeance
                 MOVE 0 TO Wseanceok
@@ -430,22 +442,21 @@ PROCEDURE DIVISION.
             END-IF
           END-IF
         PERFORM WITH TEST AFTER UNTIL WfinSeance = 1
-          DISPLAY "Rentré dans la boucle"
           READ fseances NEXT
             AT END 
               MOVE 1 TO WfinSeance
             NOT AT END 
               IF WnumsalleS = fsea_numsalle THEN
                 MOVE Wheure TO Wheureavant
-                SUBTRACT fsea_heure FROM Wheureavant
-                IF Wheure < 3 AND > 0 
+                SUBTRACT fsea_heure FROM Wheureavant GIVING Wheureavant
+                IF Wheureavant < 3 AND >= 0 
                   DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
                   MOVE 1 TO WfinSeance
                   MOVE 0 TO Wseanceok 
                 ELSE
                   MOVE fsea_heure TO Wheureapres
-                  SUBTRACT Wheure FROM Wheureapres
-                  IF Wheureapres < 3 AND > 0 THEN
+                  SUBTRACT Wheure FROM Wheureapres GIVING Wheureapres
+                  IF Wheureapres < 3 AND >= 0 THEN
                     DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
                     MOVE 1 TO WfinSeance
                     MOVE 0 TO Wseanceok 
@@ -475,8 +486,86 @@ PROCEDURE DIVISION.
     END-IF.
 
     RECHERCHE_SEANCE.
-        DISPLAY "Recherche séance".
-    
+
+      PERFORM WITH TEST AFTER UNTIL Wchoixcritere = 1 OR = 2
+        DISPLAY "Par quel critère voulez vous chercher les séances : 1 par date, 2 par genre"
+        ACCEPT Wchoixcritere
+      END-PERFORM
+      MOVE FUNCTION CURRENT-DATE to WdateActu
+      IF Wchoixcritere = 1 THEN
+        MOVE 0 TO Wdaterechercheok
+        PERFORM WITH TEST AFTER UNTIL Wdaterechercheok = 1
+          DISPLAY "Veuillez saisir la date au format ddmmyyyy"
+          ACCEPT Wdaterecherche
+          MOVE FUNCTION CONCATENATE(Wanneerecherche,Wmoisrecherche,Wjourrecherche) TO Wdate
+          IF FUNCTION TEST-DATE-YYYYMMDD(Wdate) = 00000000 THEN
+            MOVE 1 TO Wdaterechercheok
+          ELSE
+            DISPLAY "La date saisie n'existe pas"
+          END-IF
+        END-PERFORM
+        MOVE Wdaterecherche TO fsea_date
+        OPEN INPUT fseances
+        START fseances KEY = fsea_date
+          INVALID KEY
+            DISPLAY "Pas de séance existante à cette date"
+            MOVE 1 TO Wfinseancerecherche
+          NOT INVALID KEY
+          PERFORM WITH TEST AFTER UNTIL Wfinseancerecherche = 1
+            READ fseances NEXT
+              AT END 
+                MOVE 1 TO Wfinseancerecherche
+              NOT AT END 
+                MOVE fsea_idfilm TO ff_id
+                OPEN INPUT ffilms
+                READ ffilms
+                INVALID KEY
+                  DISPLAY "Erreur lors de la recherche du film de la séance, celui-ci n'existe pas"
+                NOT INVALID KEY
+                  MOVE ff_titre TO Wtitrerecherche
+                DISPLAY "La séance numéro ",fsea_id," se déroule dans la salle ",fsea_numsalle," avec le film ",Wtitrerecherche
+                CLOSE ffilms
+            END-READ
+          END-PERFORM
+        END-START
+        CLOSE fseances
+      ELSE
+        DISPLAY "Veuillez saisir le genre dont vous voulez voir toutes les séances"
+        ACCEPT Wgenrerecherche
+        OPEN INPUT ffilms
+        OPEN INPUT fseances
+        MOVE Wgenrerecherche TO ff_genre
+        START ffilms KEY = ff_genre
+          INVALID KEY
+            MOVE 1 TO Wfinfilmrecherche
+            DISPLAY "Aucun film ne correspond à votre critère de recherche"
+          NOT INVALID KEY
+          PERFORM WITH TEST AFTER UNTIL Wfinfilmrecherche = 1
+            READ ffilms NEXT
+              AT END 
+                MOVE 1 TO Wfinfilmrecherche
+              NOT AT END 
+                MOVE ff_id TO Widfilmrecherche
+                MOVE ff_titre TO Wtitrerecherche
+                START fseances KEY = fsea_idfilm
+                INVALID KEY
+                  DISPLAY "Erreur lors de la recherche du film dans la séance, celui-ci n'existe pas"
+                PERFORM WITH TEST AFTER UNTIL Wfinseancerecherche = 1
+                  READ fseances NEXT
+                    AT END 
+                      MOVE 1 TO Wfinseancerecherche
+                    NOT AT END
+                      DISPLAY "La séance numéro ",fsea_id," se déroule dans la salle ",fsea_numsalle," avec le film ",Wtitrerecherche
+                  END-READ
+                END-PERFORM
+                END-START
+            END-READ
+          END-PERFORM
+        END-START
+        CLOSE fseances
+        CLOSE ffilms
+      END-IF.
+
     SUPPRESSION_SEANCE.
         DISPLAY "Suppression séance".
     
