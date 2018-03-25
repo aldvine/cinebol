@@ -47,7 +47,7 @@ DATA DIVISION.
     FILE SECTION.
     FD fseances.
     01 seaTampon.
-        02 fsea_id PIC 9(2).
+        02 fsea_id PIC 9(4).
         02 fsea_date.
 			     03 fsea_jour PIC 9(2).
 			     03 fsea_mois PIC 9(2).
@@ -55,18 +55,18 @@ DATA DIVISION.
 		    02 fsea_horaire.
 			     03 fsea_minute PIC 9(2).
 			     03 fsea_heure PIC 9(2).
-        02 fsea_numsalle PIC 9(2).
-        02 fsea_idfilm PIC 9(2).			
+        02 fsea_numsalle PIC 9(4).
+        02 fsea_idfilm PIC 9(4).			
         02 fsea_typedif PIC 9.
         
     FD fsalles.
     01 salTampon.
-        02 fsal_num PIC 9(2).
+        02 fsal_num PIC 9(4).
         02 fsal_nbplace PIC 9(3).
         
     FD ffilms.
     01 filmTampon.
-        02 ff_id PIC 9(3).
+        02 ff_id PIC 9(4).
         02 ff_titre PIC A(50).
         02 ff_genre PIC A(20).
         02 ff_annee PIC 9(4).
@@ -76,17 +76,17 @@ DATA DIVISION.
         02 fc_mail PIC A(500).    
         02 fc_prenom PIC A(30).
         02 fc_datedeb.
-           03 fc_jour PIC 9(2).
-           03 fc_mois PIC 9(2).
            03 fc_annee PIC 9(4).
+           03 fc_mois PIC 9(2).
+           03 fc_jour PIC 9(2).
         02 fc_duree PIC 9(2).
         
     FD freservation.
     01 reserTampon.
-        02 fr_num PIC 9(2).    
-        02 fr_idseance PIC 9(2).    
-        02 fr_place PIC 9(2).    
-        02 fr_montant PIC 9(2).    
+        02 fr_num PIC 9(4).    
+        02 fr_idseance PIC 9(4).    
+        02 fr_place PIC 9(3).    
+        02 fr_montant PIC 9(4).    
         02 fr_placeAbonne PIC 9(2).   
 
 WORKING-STORAGE SECTION.
@@ -100,10 +100,10 @@ WORKING-STORAGE SECTION.
     77 fr_stat PIC 9(2).
     
     *> variables constantes
-    77 WtarifAdulte PIC 99V99 VALUE 6.50.
-    77 WtarifEnfant PIC 9V99 VALUE 3.50.
-    77 WtarifReduc PIC 9 VALUE 5.
-    77 Wtarif3D PIC 9V99 VALUE 1.50.
+    77 WtarifAdulte PIC 99 VALUE 7.
+    77 WtarifEnfant PIC 99 VALUE 3.
+    77 WtarifReduc PIC 99 VALUE 4.
+    77 Wtarif3D PIC 99 VALUE 1.
     
     *> variable autre
     77 Wmenu PIC 9(2).
@@ -111,9 +111,9 @@ WORKING-STORAGE SECTION.
     
     
     *> variables du fichier seances.dat
-    77 WidS PIC 9(2).
-    77 WnumsalleS PIC 9(2).
-    77 WidfilmS PIC 9(2).
+    77 WidS PIC 9(4).
+    77 WnumsalleS PIC 9(4).
+    77 WidfilmS PIC 9(4).
     77 WtypedifS PIC 9(2).
     77 WminuteS PIC 9(2).
     77 WheureS PIC 9(2).
@@ -122,14 +122,14 @@ WORKING-STORAGE SECTION.
     77 WanneS PIC 9(4).
     
     *> variables du fichier salles.dat
-    77 WnumS PIC 9(2).
+    77 WnumS PIC 9(4).
     77 WnbplaceS PIC 9(3).
     
     *> variables du fichier films.dat
-    77 WidF PIC 9(2).
+    77 WidF PIC 9(4).
     77 WtitreF PIC A(50).
     77 WgenreF PIC A(20).
-    77 WanneeF PIC 9(2).
+    77 WanneeF PIC 9(4).
     
     *> variables du fichier clients.dat
     77 WmailC PIC A(250).    
@@ -138,10 +138,10 @@ WORKING-STORAGE SECTION.
     77 WdureeC PIC 9(2).
     
     *> variables du fichier reservations.dat
-    77 WnumR PIC 9(2).    
-    77 WidseanceR PIC 9(2).    
-    77 WplaceR PIC 9(2).    
-    77 WmontantR PIC 9(2).
+    77 WnumR PIC 9(4).    
+    77 WidseanceR PIC 9(4).    
+    77 WplaceR PIC 9(3).    
+    77 WmontantR PIC 9(4).
     77 Wplace_abonneR PIC 9(2).
     
     *> variable de la fonction ajout_seances
@@ -201,6 +201,7 @@ WORKING-STORAGE SECTION.
     77 WdateInteger PIC 9(8).
     77 WplaceRestante PIC 9(4).
     77 Wplace_enfant PIC 9(4).
+    77 Werror PIC 9(1).
 
 
     *> variables Andy
@@ -298,14 +299,14 @@ PROCEDURE DIVISION.
         MOVE FUNCTION CURRENT-DATE to WdateActu
         MOVE 0 TO Wanneeok
         PERFORM WITH TEST AFTER UNTIL Wanneeok = 1   
-			PERFORM WITH TEST AFTER UNTIL Wannes >= Wannee
+			PERFORM WITH TEST AFTER UNTIL WanneS >= Wannee
 				DISPLAY "Veuillez saisir l'année"
 				ACCEPT WanneS
 			END-PERFORM
 			PERFORM WITH TEST AFTER UNTIL WmoisS < 13 AND > 0
 				DISPLAY "Veuillez saisir le mois"
 				ACCEPT WmoisS
-				IF Wannes = Wannee THEN
+				IF WanneS = Wannee THEN
 					IF WmoisS < Wmois THEN
 						MOVE 13 TO WmoisS
 						DISPLAY "Ce mois est déja passé"
@@ -345,7 +346,7 @@ PROCEDURE DIVISION.
 				END-IF
 			END-IF
 		END-PERFORM
-		PERFORM WITH TEST AFTER UNTIL WminuteS < 61 AND > -1
+		PERFORM WITH TEST AFTER UNTIL WminuteS < 60 AND > -1
 			DISPLAY "Veuillez saisir la minute à laquelle commence la séance"
 			ACCEPT WminuteS
 			IF Wannes = Wannee THEN
@@ -353,7 +354,7 @@ PROCEDURE DIVISION.
 					IF WjourS = Wjour THEN
 						IF WheureS = Wheure THEN
 							IF WminuteS < Wminute THEN
-								MOVE 61 TO WminuteS
+								MOVE 60 TO WminuteS
 								DISPLAY "Cet horaire est déja passé"
 							END-IF
 						END-IF
@@ -371,9 +372,10 @@ PROCEDURE DIVISION.
         DISPLAY "Veuillez saisir l'id du film"
         ACCEPT WidfilmS
         MOVE WidfilmS TO ff_id
-        START ffilms key = ff_id
+        START ffilms 
           INVALID KEY
             DISPLAY "Ce film n'existe pas"
+             *> boucle infini si aucun film existe
           NOT INVALID KEY
             MOVE 1 TO Widfilmok
         END-START
@@ -384,32 +386,31 @@ PROCEDURE DIVISION.
         DISPLAY "Veuillez saisir l'id de la salle"
         ACCEPT WnumsalleS
         MOVE WnumsalleS TO fsal_num
-        START fsalles key = fsal_num
+        START fsalles
           INVALID KEY
             DISPLAY "Cette salle n'existe pas"
+            *> boucle infini si aucune salle existe
           NOT INVALID KEY
             MOVE 1 TO WidSalleok
         END-START
       END-PERFORM
       CLOSE fsalles
-      PERFORM WITH TEST AFTER UNTIL WtypedifS = 0 OR = 1
+      PERFORM WITH TEST AFTER UNTIL WtypedifS = 0 OR WtypedifS = 1
         DISPLAY "Veuillez saisir si la séance est de type 3D (0 pour non 1 pour oui)"
         ACCEPT WtypedifS
       END-PERFORM
-      OPEN INPUT fseances
+      OPEN I-O fseances
       PERFORM WITH TEST AFTER UNTIL WidSeanceok = 1
         DISPLAY "Veuillez saisir l'id de la séance"
         ACCEPT WidS
         MOVE WidS TO fsea_id
-        START fseances key = fsea_id
+        START fseances 
           INVALID KEY
             MOVE 1 TO WidSeanceok
           NOT INVALID KEY
             DISPLAY "Ce numéro de séance est déja utilisé"
         END-START
       END-PERFORM
-      CLOSE fseances
-      OPEN INPUT fseances
       MOVE WnumsalleS TO fsea_numsalle
       MOVE WjourS TO fsea_jour
       MOVE WmoisS TO fsea_mois
@@ -465,7 +466,6 @@ PROCEDURE DIVISION.
           END-READ
         END-PERFORM
       END-START
-      CLOSE fseances
     END-PERFORM
     MOVE WidS  TO fsea_id
     MOVE WjourS TO fsea_jour
@@ -476,14 +476,13 @@ PROCEDURE DIVISION.
     MOVE WnumsalleS TO fsea_numsalle
     MOVE WidfilmS TO fsea_idfilm
     MOVE WtypedifS TO fsea_typedif
-    OPEN I-O fseances
     WRITE seaTampon
     END-WRITE
     CLOSE fseances
     IF fsea_stat = 00 THEN
       DISPLAY "Seance ajoutée"
     ELSE 
-      DISPLAY fsea_stat
+      DISPLAY "erreur enregistrement",   fsea_stat
     END-IF.
 
     RECHERCHE_SEANCE.
@@ -871,6 +870,7 @@ PROCEDURE DIVISION.
                PERFORM WITH TEST AFTER UNTIL Wfin =1 
                  DISPLAY "Saisir le numéro de la réservation : "
                   ACCEPT WnumR
+                  MOVE WnumR to fr_num
                    READ freservation
                     INVALID KEY 
                        MOVE 1 to Wfin
@@ -878,51 +878,74 @@ PROCEDURE DIVISION.
                        DISPLAY "Numéro de reservation déjà existant, saisissez en un nouveau"
                     END-READ
                END-PERFORM
-               
+               OPEN INPUT fsalles
                DISPLAY "Saisir le nombre de places à commander"
                ACCEPT WplaceR
                  MOVE WidseanceR TO fr_idseance
                   *> se positionner
+                MOVE 0 to Werror
+                MOVE 0 TO WplaceRestante
                 START freservation key = fr_idseance
                 invalid key
-                    DISPLAY "ERREUR impossible de trouver la seance selectionner"
+                    MOVE fsea_numsalle TO fsal_num
+                    READ fsalles
+                        INVALID KEY 
+                           MOVE 1 to Werror
+                          DISPLAY "Erreur , la seance n'as pas de salle"
+                        NOT INVALID KEY 
+                          COMPUTE WplaceRestante = fsal_nbplace 
+                    END-READ
                 not invalid key
                     MOVE 0 TO Wfin
-                    *> lecture sur zone indexe 
-                 MOVE 0 TO WplaceRestante
-                 PERFORM WITH TEST AFTER UNTIL Wfin =1
-                    READ freservation NEXT
-                    AT END
-                        MOVE 1 TO Wfin
-                    NOT AT END
-                        COMPUTE WnbplaceS = WnbplaceS + fr_place
+                        *> lecture sur zone indexe 
+                     MOVE 0 to WnbplaceS
+                     PERFORM WITH TEST AFTER UNTIL Wfin =1
+                        READ freservation NEXT
+                        AT END
+                            MOVE 1 TO Wfin
+                        NOT AT END
+                            COMPUTE WnbplaceS = WnbplaceS + fr_place
+                        END-READ
+                     END-PERFORM
+                     
+                     MOVE fsea_numsalle TO fsal_num
+                     READ fsalles
+                        INVALID KEY 
+                          MOVE 1 to Werror
+                          DISPLAY "Erreur , la seance n'as pas de salle"
+                        NOT INVALID KEY 
+                          COMPUTE WplaceRestante = fsal_nbplace - WnbplaceS
                     END-READ
-                 END-PERFORM
-                 OPEN INPUT fsalles
-                 MOVE fsea_numsalle TO fsal_num
-                 READ fsalles
-                    INVALID KEY 
-                      DISPLAY "Erreur , la seance n'as pas de salle"
-                    NOT INVALID KEY 
-                      COMPUTE WplaceRestante = fsal_nbplace - WnbplaceS
-                      MOVE 0 TO WmontantR
-                      IF WplaceR > WplaceRestante THEN
+                END-START 
+                 CLOSE fsalles  
+                  MOVE 0 TO WmontantR
+                IF WplaceR <=  WplaceRestante AND Werror <> 1 THEN
                         PERFORM WITH TEST AFTER UNTIL Wplace_enfant <= WplaceR AND Wplace_enfant >=0
+                          MOVE 0 TO WmontantR
                          DISPLAY "Saisir le nombre de places enfant "
                          ACCEPT Wplace_enfant
                          COMPUTE WmontantR = WmontantR + WtarifEnfant * Wplace_enfant
+                         display "montant enfant  : ",WmontantR
                         END-PERFORM
                         COMPUTE Wtampon = WplaceR - Wplace_enfant
-                        PERFORM WITH TEST AFTER UNTIL Wplace_abonneR <= Wtampon
-                         DISPLAY "Saisir le nombre de places abonnés inferieur ou egale à ",Wtampon
-                         ACCEPT Wplace_abonneR
-                        END-PERFORM
+                        IF Wtampon >0 THEN
+                           PERFORM WITH TEST AFTER UNTIL Wplace_abonneR <= Wtampon
+                            DISPLAY "Saisir le nombre de places abonnés inferieur ou egale à ",Wtampon
+                            ACCEPT Wplace_abonneR
+                           END-PERFORM
+                       ELSE
+                          MOVE 0 to Wplace_abonneR
+                       END-IF
+                       COMPUTE  Wtampon = Wtampon - Wplace_abonneR
+                        *> ajout du tarif 3D ou non
+                        COMPUTE WmontantR = WmontantR + Wtampon* WtarifAdulte
                         IF fsea_typedif =1 THEN
                           COMPUTE WmontantR = WmontantR + WplaceR * Wtarif3D
                         END-IF
                         MOVE 0 to Wcpt
                         OPEN INPUT fclients
-                         PERFORM WITH TEST AFTER UNTIL Wcpt < Wplace_abonneR 
+                        IF Wcpt <> Wplace_abonneR THEN
+                         PERFORM WITH TEST AFTER UNTIL Wcpt >= Wplace_abonneR 
                              COMPUTE Wcpt = Wcpt + 1
                              DISPLAY "saisir le mail de l'abonné no ",Wcpt
                              ACCEPT fc_mail
@@ -946,7 +969,8 @@ PROCEDURE DIVISION.
                                       COMPUTE WmontantR = WmontantR + WtarifAdulte
                                    END-IF
                             END-READ
-                         END-PERFORM
+                          END-PERFORM
+                         END-IF
                          CLOSE fclients
                           MOVE WmontantR to fr_montant
                           MOVE WplaceR to fr_place
@@ -961,19 +985,16 @@ PROCEDURE DIVISION.
                           DISPLAY " Seance no ",fsea_id
                           DISPLAY "DATE : ",fsea_date
                           DISPLAY "HEURE : ",fsea_horaire
-                          DISPLAY "nombre de place reserver : ",WplaceR
+                          DISPLAY "nombre de place reserver : ",fr_place
                           DISPLAY "dont enfant : ",Wplace_enfant
-                          DISPLAY "montant total à payer : ",WmontantR
+                          DISPLAY "montant total à payer : ",fr_montant
                          ELSE
                             DISPLAY "Erreur inconnue, Impossible d'enregistrer cette reservation"
                          END-IF
                       ELSE
                        DISPLAY "ERREUR, il ne reste que ",WplaceRestante," places pour cette seance"
-                       DISPLAY "et vous en demandez",WplaceR
-                      END-IF
-                 END-READ
-                 CLOSE fsalles
-                END-START           
+                       DISPLAY "et vous en demandez ",WplaceR
+                      END-IF        
               CLOSE freservation
         END-READ
        
@@ -981,21 +1002,23 @@ PROCEDURE DIVISION.
         DISPLAY "---------------fin ajout reservation---------------".
       
     RECHERCHE_RESERVATION.
+      OPEN INPUT freservation
+    
         DISPLAY "----------------- DEBUT recherche réservation ---------------"
            DISPLAY "Saisir le numéro de la reservation"
            ACCEPT fr_num
            READ freservation
               INVALID KEY
-              DISPLAY " Aucune reservation pour ce numéro "
+                 DISPLAY " Aucune reservation pour ce numéro "
               NOT INVALID KEY
-                DISPLAY "--------RECAPITULATIF RESERVATION ---------"
+                  DISPLAY "--------RECAPITULATIF RESERVATION ---------"
                    DISPLAY " Reservation no ",fr_num
                    DISPLAY " Seance no ",fr_idseance
-                   DISPLAY "nombre de place reserver : ",WplaceR
-                   DISPLAY "dont enfant : ",Wplace_enfant
-                   DISPLAY "montant total à payer : ",WmontantR
+                   DISPLAY "nombre de place reserver : ",fr_place
+                   DISPLAY "dont abonne : ",fr_placeAbonne
+                   DISPLAY "montant total à payer : ",fr_montant
            END-READ
-
+       CLOSE freservation
         DISPLAY "----------------- FIN recherche réservation ---------------".
     
     AFFICHE_RESERVATIONS.
@@ -1033,9 +1056,9 @@ PROCEDURE DIVISION.
                                 NOT AT END
                                 *> affichage de toutes les reservation
                                  DISPLAY "--- RESERVATION ",fr_num,"---"
-                                 DISPLAY "nombre de place reserver : ",WplaceR
-                                 DISPLAY "dont enfant : ",Wplace_enfant
-                                 DISPLAY "montant total à payer : ",WmontantR
+                                 DISPLAY "nombre de place reserver : ",fr_place
+                                 DISPLAY "dont abonne : ",fr_placeAbonne
+                                 DISPLAY "montant total à payer : ", fr_montant
                              END-READ
                           END-PERFORM
                       END-START
