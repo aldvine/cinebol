@@ -781,6 +781,7 @@ PROCEDURE DIVISION.
                PERFORM WITH TEST AFTER UNTIL Wfin =1 
                  DISPLAY "Saisir le numéro de la réservation : "
                   ACCEPT WnumR
+                  MOVE WnumR to fr_num
                    READ freservation
                     INVALID KEY 
                        MOVE 1 to Wfin
@@ -793,7 +794,8 @@ PROCEDURE DIVISION.
                ACCEPT WplaceR
                  MOVE WidseanceR TO fr_idseance
                   *> se positionner
-                  MOVE 0 to Werror
+                MOVE 0 to Werror
+                MOVE 0 TO WplaceRestante
                 START freservation key = fr_idseance
                 invalid key
                     MOVE fsea_numsalle TO fsal_num
@@ -807,7 +809,7 @@ PROCEDURE DIVISION.
                 not invalid key
                     MOVE 0 TO Wfin
                         *> lecture sur zone indexe 
-                     MOVE 0 TO WplaceRestante
+                     MOVE 0 to WnbplaceS
                      PERFORM WITH TEST AFTER UNTIL Wfin =1
                         READ freservation NEXT
                         AT END
@@ -830,23 +832,31 @@ PROCEDURE DIVISION.
                   MOVE 0 TO WmontantR
                 IF WplaceR <=  WplaceRestante AND Werror <> 1 THEN
                         PERFORM WITH TEST AFTER UNTIL Wplace_enfant <= WplaceR AND Wplace_enfant >=0
+                          MOVE 0 TO WmontantR
                          DISPLAY "Saisir le nombre de places enfant "
                          ACCEPT Wplace_enfant
                          COMPUTE WmontantR = WmontantR + WtarifEnfant * Wplace_enfant
-                         display WmontantR
+                         display "montant enfant  : ",WmontantR
                         END-PERFORM
                         COMPUTE Wtampon = WplaceR - Wplace_enfant
-                        PERFORM WITH TEST AFTER UNTIL Wplace_abonneR <= Wtampon
-                         DISPLAY "Saisir le nombre de places abonnés inferieur ou egale à ",Wtampon
-                         ACCEPT Wplace_abonneR
-                        END-PERFORM
+                        IF Wtampon >0 THEN
+                           PERFORM WITH TEST AFTER UNTIL Wplace_abonneR <= Wtampon
+                            DISPLAY "Saisir le nombre de places abonnés inferieur ou egale à ",Wtampon
+                            ACCEPT Wplace_abonneR
+                           END-PERFORM
+                       ELSE
+                          MOVE 0 to Wplace_abonneR
+                       END-IF
+                       COMPUTE  Wtampon = Wtampon - Wplace_abonneR
                         *> ajout du tarif 3D ou non
+                        COMPUTE WmontantR = WmontantR + Wtampon* WtarifAdulte
                         IF fsea_typedif =1 THEN
                           COMPUTE WmontantR = WmontantR + WplaceR * Wtarif3D
                         END-IF
                         MOVE 0 to Wcpt
                         OPEN INPUT fclients
-                         PERFORM WITH TEST AFTER UNTIL Wcpt <= Wplace_abonneR 
+                        IF Wcpt <> Wplace_abonneR THEN
+                         PERFORM WITH TEST AFTER UNTIL Wcpt >= Wplace_abonneR 
                              COMPUTE Wcpt = Wcpt + 1
                              DISPLAY "saisir le mail de l'abonné no ",Wcpt
                              ACCEPT fc_mail
@@ -870,7 +880,8 @@ PROCEDURE DIVISION.
                                       COMPUTE WmontantR = WmontantR + WtarifAdulte
                                    END-IF
                             END-READ
-                         END-PERFORM
+                          END-PERFORM
+                         END-IF
                          CLOSE fclients
                           MOVE WmontantR to fr_montant
                           MOVE WplaceR to fr_place
@@ -885,15 +896,15 @@ PROCEDURE DIVISION.
                           DISPLAY " Seance no ",fsea_id
                           DISPLAY "DATE : ",fsea_date
                           DISPLAY "HEURE : ",fsea_horaire
-                          DISPLAY "nombre de place reserver : ",WplaceR
+                          DISPLAY "nombre de place reserver : ",fr_place
                           DISPLAY "dont enfant : ",Wplace_enfant
-                          DISPLAY "montant total à payer : ",WmontantR
+                          DISPLAY "montant total à payer : ",fr_montant
                          ELSE
                             DISPLAY "Erreur inconnue, Impossible d'enregistrer cette reservation"
                          END-IF
                       ELSE
                        DISPLAY "ERREUR, il ne reste que ",WplaceRestante," places pour cette seance"
-                       DISPLAY "et vous en demandez",WplaceR
+                       DISPLAY "et vous en demandez ",WplaceR
                       END-IF        
               CLOSE freservation
         END-READ
@@ -902,21 +913,23 @@ PROCEDURE DIVISION.
         DISPLAY "---------------fin ajout reservation---------------".
       
     RECHERCHE_RESERVATION.
+      OPEN INPUT freservation
+    
         DISPLAY "----------------- DEBUT recherche réservation ---------------"
            DISPLAY "Saisir le numéro de la reservation"
            ACCEPT fr_num
            READ freservation
               INVALID KEY
-              DISPLAY " Aucune reservation pour ce numéro "
+                 DISPLAY " Aucune reservation pour ce numéro "
               NOT INVALID KEY
-                DISPLAY "--------RECAPITULATIF RESERVATION ---------"
+                  DISPLAY "--------RECAPITULATIF RESERVATION ---------"
                    DISPLAY " Reservation no ",fr_num
                    DISPLAY " Seance no ",fr_idseance
-                   DISPLAY "nombre de place reserver : ",WplaceR
-                   DISPLAY "dont enfant : ",Wplace_enfant
-                   DISPLAY "montant total à payer : ",WmontantR
+                   DISPLAY "nombre de place reserver : ",fr_place
+                   DISPLAY "dont abonne : ",fr_placeAbonne
+                   DISPLAY "montant total à payer : ",fr_montant
            END-READ
-
+       CLOSE freservation
         DISPLAY "----------------- FIN recherche réservation ---------------".
     
     AFFICHE_RESERVATIONS.
@@ -954,9 +967,9 @@ PROCEDURE DIVISION.
                                 NOT AT END
                                 *> affichage de toutes les reservation
                                  DISPLAY "--- RESERVATION ",fr_num,"---"
-                                 DISPLAY "nombre de place reserver : ",WplaceR
-                                 DISPLAY "dont enfant : ",Wplace_enfant
-                                 DISPLAY "montant total à payer : ",WmontantR
+                                 DISPLAY "nombre de place reserver : ",fr_place
+                                 DISPLAY "dont abonne : ",fr_placeAbonne
+                                 DISPLAY "montant total à payer : ", fr_montant
                              END-READ
                           END-PERFORM
                       END-START
