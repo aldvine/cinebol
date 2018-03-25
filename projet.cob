@@ -707,7 +707,7 @@ PROCEDURE DIVISION.
               DISPLAY "Client ",Wcpt
               
               DISPLAY "Email : ", fc_mail
-              DISPLAY "Prenom: ", fc_mail
+              DISPLAY "Prenom: ", fc_prenom
               DISPLAY "date de debut d'abonnement : ", fc_jour,"/",fc_mois,"/",fc_annee
               DISPLAY "Durée de l'abonnement (en mois) :",fc_duree
               DISPLAY "-----------------------------"
