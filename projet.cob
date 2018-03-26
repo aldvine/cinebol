@@ -219,6 +219,10 @@ WORKING-STORAGE SECTION.
     77 WplaceRestante PIC 9(4).
     77 Wplace_enfant PIC 9(4).
     77 Werror PIC 9(1).
+    01 WdateNow.
+           02 WanneeNow PIC 9(4).
+           02 WmoisNow PIC 9(2).
+           02 WjoursNow PIC 9(2).
 
 
     *> variables Andy
@@ -273,7 +277,7 @@ PROCEDURE DIVISION.
         DISPLAY "11-Ajout réservation"
         DISPLAY "12-Recherche réservation"
         DISPLAY "13-Affiche réservations en cours"
-        DISPLAY "14-Bénéfice journalier"
+        DISPLAY "14-Montant journalier"
         DISPLAY "15-Classement entrée"
         DISPLAY "16-Quitter"
         ACCEPT Wmenu
@@ -313,6 +317,7 @@ PROCEDURE DIVISION.
     STOP RUN.
     
     AJOUT_SEANCE.
+    DISPLAY "--------------DEBUT AJOUT SEANCE--------------"
       MOVE FUNCTION CURRENT-DATE to WdateActu
       PERFORM WITH TEST AFTER UNTIL Wseanceok = 1
 		DISPLAY "--------DEBUT DE L'AJOUT DE LA SEANCE--------"
@@ -507,10 +512,11 @@ PROCEDURE DIVISION.
           ELSE 
             DISPLAY "erreur enregistrement", fsea_stat
           END-IF
-        END-IF.
+        END-IF
+        DISPLAY "--------------FIN AJOUT SEANCE--------------".
 
     RECHERCHE_SEANCE.
-	DISPLAY "--------DEBUT DE LA RECHERCHE DE LA SEANCE--------"
+	DISPLAY "--------DEBUT RECHERCHE SEANCE--------"
 	MOVE 0 TO Wfinseancerecherche
 	MOVE 0 TO Wfinfilmrecherche
       PERFORM WITH TEST AFTER UNTIL Wchoixcritere = 1 OR = 2
@@ -604,9 +610,10 @@ PROCEDURE DIVISION.
         CLOSE fseances
         CLOSE ffilms
       END-IF
-	DISPLAY "--------FIN DE LA RECHERCHE DES SEANCES--------".
-	
+  DISPLAY "--------------FIN RECHERCHE SEANCE--------------".
+  
     SUPPRESSION_SEANCE.
+           DISPLAY "--------------DEBUT SUPPRESSION SEANCE --------------"
       MOVE 0 TO Wchoixsuppr
         DISPLAY "Veuillez saisir l'id de la seance à supprimer"
         ACCEPT WidSeance
@@ -654,43 +661,42 @@ PROCEDURE DIVISION.
 		  END-IF
         END-IF
         CLOSE fseances
-        CLOSE freservation.
+        CLOSE freservation
+       DISPLAY "--------------FIN SUPPRESSION SEANCE--------------".
     
     AJOUT_SALLE.
-    
-       PERFORM WITH TEST AFTER UNTIL Wtrouve = 0
-              PERFORM WITH TEST AFTER UNTIL WnumS <> ' '
+      OPEN I-O fsalles
+      MOVE 1 TO Wtrouve
+  
+       DISPLAY "--------------DEBUT AJOUT SALLE--------------"
+              PERFORM WITH TEST AFTER UNTIL WnumS <> ' ' AND Wtrouve = 0
                      DISPLAY 'Quel est le numéro de la salle à ajouter ?'			
                      ACCEPT WnumS
+                      MOVE WnumS to fsal_num
+                     READ fsalles 
+                       INVALID KEY
+                           MOVE 0 TO Wtrouve
+                     NOT INVALID KEY
+                          DISPLAY "ERREUR, la salle existe déjà "
+                          MOVE 1 TO Wtrouve
+                     END-READ
               end-perform
-              PERFORM WITH TEST AFTER UNTIL WnbplaceS <> ' '
-                     DISPLAY 'Quel est le nombre de places de la salle ?'
+              PERFORM WITH TEST AFTER UNTIL WnbplaceS <> ' ' AND WnbplaceS >0
+                     DISPLAY 'Quel est le nombre de places de la salle ? (>0)'
                      ACCEPT WnbplaceS
               END-PERFORM
-              
-              OPEN INPUT fsalles
-              MOVE 0 TO Wtrouve
-              MOVE 0 TO Wfin
-              PERFORM WITH TEST AFTER UNTIL Wfin = 1 OR Wtrouve = 1
-                     READ fsalles NEXT
-                     AT END MOVE 1 TO Wfin
-                     NOT AT END 
-                            IF WnumS = fsal_num THEN
-                                   MOVE 1 TO Wtrouve
-                            END-IF
-                     END-READ
-              END-PERFORM
-              CLOSE fsalles
-       END-PERFORM
+             
+       DISPLAY "--------------FIN AJOUT SALLE--------------"
+
        MOVE WnumS TO fsal_num
        MOVE WnbplaceS TO fsal_nbplace
-       OPEN I-O fsalles
-	WRITE salTampon
-	END-WRITE
-	CLOSE fsalles.
+      
+      	WRITE salTampon
+      	END-WRITE
+      	CLOSE fsalles.
        
     RECHERCHE_SALLE.
-    
+      DISPLAY "--------------DEBUT RECHERCHE SALLE--------------".
        OPEN INPUT fsalles
        MOVE 0 TO Wfin
        DISPLAY 'Quel est le numéro de la salle ?'
@@ -707,9 +713,11 @@ PROCEDURE DIVISION.
                      END-IF
               END-READ
        END-PERFORM
-       CLOSE fsalles.
+       CLOSE fsalles
+       DISPLAY "--------------FIN RECHERCHE SALLE--------------".
     
     AJOUT_FILM.
+    DISPLAY "--------------DEBUT AJOUT FILM--------------"
 		MOVE 0 TO Wtrouve
 		PERFORM WITH TEST AFTER UNTIL Wtrouve = 1
 			PERFORM WITH TEST AFTER UNTIL WidF <> ' '
@@ -729,7 +737,8 @@ PROCEDURE DIVISION.
                      DISPLAY 'Quel est le genre du film ?'
                      ACCEPT ff_genre
 				END-PERFORM
-				PERFORM WITH TEST AFTER UNTIL ff_annee <> ' '
+        MOVE FUNCTION CURRENT-DATE to WdateNow
+				PERFORM WITH TEST AFTER UNTIL ff_annee <> ' ' AND ff_annee <= WanneeNow
                      DISPLAY 'En quel année est sorti le film ?'
                      ACCEPT ff_annee
 				END-PERFORM
@@ -741,9 +750,11 @@ PROCEDURE DIVISION.
 	   IF ff_stat <> 0 THEN
 			DISPLAY "Erreur enregistrement : ",ff_stat
 	   END-IF
-	   CLOSE ffilms.
+	   CLOSE ffilms
+     DISPLAY "--------------FIN AJOUT FILM--------------".
     
     RECHERCHE_FILM.
+    DISPLAY "--------------DEBUT RECHERCHE FILM --------------"
 		OPEN INPUT ffilms
 		DISPLAY "Saisir le genre du film recherché"
 		ACCEPT WgenreF
@@ -769,7 +780,8 @@ PROCEDURE DIVISION.
 			DISPLAY "Aucun film trouvé"
 			DISPLAY "--------------------------------"
 		END-IF
-		CLOSE ffilms.
+		CLOSE ffilms
+      DISPLAY "--------------FIN RECHERCHE FILM --------------".
     
     AJOUT_CLIENT.
         DISPLAY "--------------DEBUT AJOUT CLIENT--------------"
@@ -783,7 +795,6 @@ PROCEDURE DIVISION.
             DISPLAY "Veuillez saisir le prenom du client"
             ACCEPT fc_prenom
             DISPLAY "Voulez-vous ajouter un abonnement ?"
-            Display " 0-NON"
             Display " 1-OUI"
             ACCEPT Wchoix
             IF Wchoix=1 THEN
@@ -807,14 +818,12 @@ PROCEDURE DIVISION.
 
         NOT INVALID KEY 
            Display "Cette adresse e-mail existe déjà souhaitez vous mettre à jour cette fiche ?"
-           Display " 0-NON"
            Display " 1-OUI"
            ACCEPT Wchoix
            IF Wchoix=1 THEN
                  DISPLAY "Veuillez saisir le prenom du client"
                ACCEPT fc_prenom
                DISPLAY "Voulez-vous mettre à jour l'abonnement ?"
-               Display " 0-NON"
                Display " 1-OUI"
                ACCEPT Wchoix
                IF Wchoix=1 THEN
@@ -933,7 +942,7 @@ PROCEDURE DIVISION.
       CLOSE fclients.
     
     AJOUT_RESERVATION.
-        DISPLAY "--------------ajout reservation--------------"
+        DISPLAY "--------------DEBUT AJOUT RESERVATION--------------"
         *> fonction qui retourne le nombre de jour depuis le 1600/12/31
         
 
@@ -971,8 +980,10 @@ PROCEDURE DIVISION.
                     END-READ
                END-PERFORM
                OPEN INPUT fsalles
-               DISPLAY "Saisir le nombre de places à commander"
-               ACCEPT WplaceR
+               PERFORM WITH TEST AFTER UNTIL WplaceR >0 
+                 DISPLAY "Saisir le nombre de places à commander"
+                 ACCEPT WplaceR
+                END-PERFORM
                  MOVE WidseanceR TO fr_idseance
                   *> se positionner
                 MOVE 0 to Werror
@@ -1166,6 +1177,8 @@ PROCEDURE DIVISION.
         DISPLAY "----------------- FIN affiche Reservations ---------------".
     
     MONTANT_JOURNALIER.
+     DISPLAY "----------------- DEBUT MONTANT JOURNALIER ---------------"
+       MOVE 0 TO WsommeS
         DISPLAY "Saisir la date du jour sous le format JJMMYYYY"
         ACCEPT fsea_date
         MOVE fsea_jour TO WjourS
@@ -1207,19 +1220,21 @@ PROCEDURE DIVISION.
 									END-IF
 								END-READ
 							END-PERFORM
+					      COMPUTE WsommeS = WsommeS + WsommeI
 						END-START
 						DISPLAY "Horaire: ",fsea_heure,":",fsea_minute," Montant: ",WsommeI
 					END-IF
-					COMPUTE WsommeS = WsommeS + WsommeI
+    
 				END-READ
 			END-PERFORM
 		END-START
 		DISPLAY "Chiffre d'affaire de la journée: ",WsommeS
 		CLOSE fseances
-		CLOSE freservation.
+		CLOSE freservation
+    DISPLAY "----------------- FIN MONTANT JOURNALIER ---------------".
     
     AFFICHE_STATISTIQUE.
-		
+		DISPLAY "----------------- DEBUT AFFICHE STATISTIQUE ---------------"
 		INITIALIZE Wtab.
         OPEN INPUT fseances
         OPEN INPUT freservation
@@ -1227,57 +1242,59 @@ PROCEDURE DIVISION.
         MOVE 0 TO WfinF
         MOVE 1 TO Wcompt
         PERFORM WITH TEST AFTER UNTIL WfinF = 1
-			READ ffilms NEXT
-			AT END
-				MOVE 1 TO WfinF
-			NOT AT END
-				MOVE ff_id TO fsea_idfilm
-				START fseances key = fsea_idfilm
-				INVALID KEY
-					MOVE 1 TO Wfin
-				NOT INVALID KEY
-					MOVE 0 TO Wfin
-					PERFORM WITH TEST AFTER UNTIL Wfin=1
-						READ fseances NEXT
-						AT END
-							MOVE 1 TO Wfin
-						NOT AT END
-							IF ff_id<>fsea_idfilm THEN
-								MOVE 1 TO Wfin
-							ELSE
-								MOVE fsea_id TO fr_idseance
-								START freservation key = fr_idseance
-								INVALID KEY
-									MOVE 0 TO WfinR
-								NOT INVALID KEY
-									MOVE 0 TO WfinR
-									MOVE 0 TO WsommeE
-									MOVE 0 TO WsommeP
-									PERFORM WITH TEST AFTER UNTIL WfinR=1
-										READ freservation NEXT
-										AT END
-											MOVE 1 TO WfinR
-										NOT AT END
-											IF fr_idseance<>fsea_id THEN
-												MOVE 1 TO WfinR
-											ELSE
-												COMPUTE WsommeP = WsommeP + fr_place
-											END-IF
-										END-READ
-									END-PERFORM
-								END-START
-							END-IF
-						END-READ
-					END-PERFORM
-				END-START
-				MOVE WsommeP TO WnbplaceT(Wcompt)
+			  READ ffilms NEXT
+			  AT END
+				  MOVE 1 TO WfinF
+			  NOT AT END
+				  MOVE ff_id TO fsea_idfilm
+				  START fseances key = fsea_idfilm
+			   	INVALID KEY
+					 MOVE 1 TO Wfin
+				  NOT INVALID KEY
+					 MOVE 0 TO Wfin
+					 PERFORM WITH TEST AFTER UNTIL Wfin=1
+					 READ fseances NEXT
+					 AT END
+						 MOVE 1 TO Wfin
+					 NOT AT END
+						 IF ff_id<>fsea_idfilm THEN
+						     MOVE 1 TO Wfin
+						 ELSE
+						     MOVE fsea_id TO fr_idseance
+						     START freservation key = fr_idseance
+						     INVALID KEY
+									  MOVE 0 TO WfinR
+								 NOT INVALID KEY
+									  MOVE 0 TO WfinR
+									  MOVE 0 TO WsommeP
+									  PERFORM WITH TEST AFTER UNTIL WfinR=1
+										 READ freservation NEXT
+										 AT END
+											   MOVE 1 TO WfinR
+										 NOT AT END
+											   IF fr_idseance<>fsea_id THEN
+												  MOVE 1 TO WfinR
+											   ELSE
+												  COMPUTE WsommeP = WsommeP + fr_place
+                          DISPLAY WsommeP
+											   END-IF
+										 END-READ
+									  END-PERFORM
+								 END-START
+							 END-IF
+						 END-READ
+					   END-PERFORM
+             MOVE WsommeP TO WnbplaceT(Wcompt)
+				    END-START
+				
+        
 				MOVE ff_titre TO WtitlefilmT(Wcompt)
 				COMPUTE Wcompt = Wcompt + 1
 			END-READ
 		END-PERFORM
 		
 		COMPUTE Wcompt = Wcompt - 1
-		SORT WnbplaceT DESCENDING.
+		SORT Wcellule ON DESCENDING KEY WnbplaceT
 		
 		DISPLAY "Classement des films par entrée :"
 		PERFORM TEST AFTER VARYING Wi FROM 1 BY 1 UNTIL Wi = Wcompt
@@ -1286,4 +1303,5 @@ PROCEDURE DIVISION.
 		
 		CLOSE fseances
 		CLOSE freservation
-		CLOSE ffilms.
+		CLOSE ffilms
+    DISPLAY "----------------- FIN AFFICHE STATISTIQUE ---------------".
