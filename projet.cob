@@ -315,6 +315,7 @@ PROCEDURE DIVISION.
     AJOUT_SEANCE.
       MOVE FUNCTION CURRENT-DATE to WdateActu
       PERFORM WITH TEST AFTER UNTIL Wseanceok = 1
+		DISPLAY "--------DEBUT DE L'AJOUT DE LA SEANCE--------"
         MOVE 0 TO Wanneeok
         PERFORM WITH TEST AFTER UNTIL Wanneeok = 1   
 			PERFORM WITH TEST AFTER UNTIL WanneS >= Wannee
@@ -472,14 +473,14 @@ PROCEDURE DIVISION.
 						DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
 						MOVE 1 TO WfinSeance
 						MOVE 0 TO Wseanceok 
+					ELSE
+						COMPUTE Wcalcultesthoraire = Whorairecalcapres - Whorairecalcavant
+						IF Wcalcultesthoraire <= 10800 AND >= 0
+							DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+							MOVE 1 TO WfinSeance
+							MOVE 0 TO Wseanceok 
+						END-IF
 					END-IF
-                  ELSE
-					COMPUTE Wcalcultesthoraire = Whorairecalcapres - Whorairecalcavant
-					IF Wcalcultesthoraire <= 10800 AND >= 0
-						DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
-						MOVE 1 TO WfinSeance
-						MOVE 0 TO Wseanceok 
-                    END-IF
                   END-IF
               END-READ
             END-PERFORM
@@ -499,7 +500,10 @@ PROCEDURE DIVISION.
           END-WRITE
           CLOSE fseances
           IF fsea_stat = 00 THEN
-            DISPLAY "Seance ajoutée"
+            DISPLAY "--------Seance ajoutée--------"
+            DISPLAY "La séance numéro ", fsea_id," au ", fsea_jour,"/",fsea_mois,"/",fsea_annee," a été ajoutée"
+            DISPLAY "Celle-ci se déroule à ", fsea_heure, "h", fsea_minute, " dans la salle numéro ", fsea_numsalle
+            DISPLAY "--------FIN DE L'AJOUT DE LA SEANCE--------"
           ELSE 
             DISPLAY "erreur enregistrement", fsea_stat
           END-IF
@@ -590,13 +594,13 @@ PROCEDURE DIVISION.
       MOVE 0 TO Wchoixsuppr
         DISPLAY "Veuillez saisir l'id de la seance à supprimer"
         ACCEPT WidSeance
+        OPEN I-O freservation
         OPEN I-O fseances
         MOVE WidSeance TO fsea_id
         READ fseances
           INVALID KEY 
             DISPLAY "Il n'existe pas de séance possédant ce numéro"
           NOT INVALID KEY
-            OPEN I-O freservation
             MOVE WidSeance TO fr_idseance
             START freservation KEY = fr_idseance
             INVALID KEY 
@@ -605,28 +609,36 @@ PROCEDURE DIVISION.
               DISPLAY "Cette séance possède des réservations voulez vous quand même la supprimer : 0 pour non 1 pour oui "
               ACCEPT Wchoixsuppr
             IF Wchoixsuppr = 1
+			  DISPLAY "--------DEBUT SUPPRESSION DES RESERVATIONS--------"
+			  PERFORM WITH TEST AFTER UNTIL Wfinsupprreserv = 1
               READ freservation NEXT
               AT END
                 MOVE 1 TO Wfinsupprreserv
               NOT AT END
                 IF fr_idseance = WidSeance THEN
+				  DISPLAY "Suppression de la réservation numéro ", fr_num
                   DELETE freservation RECORD
+                  END-DELETE
                 ELSE
                   MOVE 1 TO Wfinsupprreserv
                 END-IF
               END-READ
+              END-PERFORM
+              DISPLAY "--------FIN SUPPRESSION DES RESERVATIONS--------"
             END-IF
             END-START
-            CLOSE freservation
           IF Wchoixsuppr = 1
             DELETE fseances RECORD
         END-READ
-        CLOSE fseances
         IF fsea_stat = 00 AND Wchoixsuppr = 1
-          DISPLAY "Suppression séance"
+          DISPLAY "Séance supprimer"
         ELSE
-          DISPLAY "Erreur suppression séance"
-        END-IF.
+		  IF fsea_stat <> 00 OR Wchoixsuppr = 0
+			DISPLAY "Erreur suppression séance"
+		  END-IF
+        END-IF
+        CLOSE fseances
+        CLOSE freservation.
     
     AJOUT_SALLE.
     
