@@ -440,6 +440,11 @@ PROCEDURE DIVISION.
           MOVE 1 TO Wseanceok
           DISPLAY fsea_date
           START fseances KEY = fsea_date
+          INVALID KEY
+            MOVE 1 TO WfinSeance
+            MOVE 1 TO Wseanceok
+          DISPLAY fsea_date
+          START fseances KEY = fsea_date
             INVALID KEY
               MOVE 1 TO WfinSeance
               MOVE 1 TO Wseanceok
@@ -742,7 +747,8 @@ PROCEDURE DIVISION.
 		CLOSE ffilms.
     
     AJOUT_CLIENT.
-    
+        DISPLAY "--------------DEBUT AJOUT CLIENT--------------"
+
         OPEN I-O fclients
         DISPLAY "Veuillez saisir l'adresse mail du client"
         ACCEPT fc_mail
@@ -807,11 +813,13 @@ PROCEDURE DIVISION.
                END-IF
            END-IF
         END-READ
-       
+               DISPLAY "--------------FIN AJOUT CLIENT--------------"
+
         CLOSE fclients.
     
     RECHERCHE_CLIENT.
-    
+       DISPLAY "--------------DEBUT RECHERCHE CLIENT--------------"
+
       OPEN INPUT fclients
       DISPLAY "saisir l'adresse mail du client"
       ACCEPT fc_mail
@@ -827,11 +835,13 @@ PROCEDURE DIVISION.
        DISPLAY "Durée de l'abonnement (en mois) :",fc_duree
        display "--------------------------------"
       END-READ
-      CLOSE fclients.
+      CLOSE fclients      
+       DISPLAY "--------------FIN RECHERCHE CLIENT--------------".
 
     LISTE_CLIENT.
     
-      
+    DISPLAY "--------------DEBUT LISTE CLIENT--------------"
+
       PERFORM WITH TEST AFTER UNTIL Wchoix =1 OR Wchoix =2
         DISPLAY "Que souhaitez-vous faire ? "
         DISPLAY "1 -Afficher tout les clients "
@@ -853,7 +863,7 @@ PROCEDURE DIVISION.
               DISPLAY "Client ",Wcpt
               
               DISPLAY "Email : ", fc_mail
-              DISPLAY "Prenom: ", fc_mail
+              DISPLAY "Prenom: ", fc_prenom
               DISPLAY "date de debut d'abonnement : ", fc_jour,"/",fc_mois,"/",fc_annee
               DISPLAY "Durée de l'abonnement (en mois) :",fc_duree
               DISPLAY "-----------------------------"
@@ -894,7 +904,7 @@ PROCEDURE DIVISION.
        DISPLAY "Aucun client à afficher"
       END-IF
 
-      
+        DISPLAY "--------------FIN LISTE CLIENT--------------"
       CLOSE fclients.
     
     AJOUT_RESERVATION.
@@ -1040,8 +1050,9 @@ PROCEDURE DIVISION.
                          IF fc_stat = 00 THEN
                           DISPLAY "--------RECAPITULATIF RESERVATION ---------"
                           DISPLAY " Seance no ",fsea_id
-                          DISPLAY "DATE : ",fsea_date
-                          DISPLAY "HEURE : ",fsea_horaire
+                          DISPLAY "DATE : ",fsea_jour,"/",fsea_mois,"/",fsea_annee
+                          DISPLAY "HEURE : ",fsea_heure,":",fsea_minute
+                          DISPLAY "type 3D : ",fsea_typedif
                           DISPLAY "nombre de place reserver : ",fr_place
                           DISPLAY "dont enfant : ",Wplace_enfant
                           DISPLAY "montant total à payer : ",fr_montant
@@ -1103,8 +1114,8 @@ PROCEDURE DIVISION.
                           NOT INVALID KEY
                           *> affichage de la seance 
                           DISPLAY "--- --- --- ---Seance ",fsea_id,"-- --- --- ---"
-                          DISPLAY "DATE : ",fsea_date
-                          DISPLAY "HEURE : ",fsea_horaire
+                          DISPLAY "DATE : ",fsea_jour,"/",fsea_mois,"/",fsea_annee
+                          DISPLAY "HEURE : ",fsea_heure,":",fsea_minute
                           MOVE 0 TO Wfin
                           PERFORM WITH TEST AFTER UNTIL Wfin=1
                               READ freservation NEXT
@@ -1115,7 +1126,7 @@ PROCEDURE DIVISION.
                                  DISPLAY "--- RESERVATION ",fr_num,"---"
                                  DISPLAY "nombre de place reserver : ",fr_place
                                  DISPLAY "dont abonne : ",fr_placeAbonne
-                                 DISPLAY "montant total à payer : ", fr_montant
+                                 DISPLAY "montant total à payer : ", fr_montant," €"
                              END-READ
                           END-PERFORM
                       END-START
