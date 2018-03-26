@@ -53,8 +53,8 @@ DATA DIVISION.
 			     03 fsea_mois PIC 9(2).
 			     03 fsea_annee PIC 9(4).
 		    02 fsea_horaire.
+				 03 fsea_heure PIC 9(2).
 			     03 fsea_minute PIC 9(2).
-			     03 fsea_heure PIC 9(2).
         02 fsea_numsalle PIC 9(4).
         02 fsea_idfilm PIC 9(4).			
         02 fsea_typedif PIC 9.
@@ -147,8 +147,8 @@ WORKING-STORAGE SECTION.
     *> variable de la fonction ajout_seances
     77 Wanneeok PIC 9(2).
     01 WdateActu. *> utilisé dans recherche_seance aussi
-    	02 Wannee PIC 9(4).
-    	02 Wmois PIC 9(2).
+      02 Wannee PIC 9(4).
+	  02 Wmois PIC 9(2).
       02 Wjour PIC 9(2).
       02 Wheure PIC 9(2).
       02 Wminute PIC 9(2).
@@ -158,10 +158,20 @@ WORKING-STORAGE SECTION.
     77 Widfilmok PIC 9(2).
     77 WidSalleok PIC 9(2).
     77 WidSeanceok PIC 9(2).
-    77 Wheureavant PIC 9(2).
-    77 Wheureapres PIC 9(2).
+    01 Whoraireavant.
+		02 Wheureavant PIC 9(2).
+		02 Wminuteavant PIC 9(2).
+		02 Wsecondeavant PIC 9(2).
+	01 Whoraireapres.
+		02 Wheureapres PIC 9(2).
+		02 Wminuteapres PIC 9(2).
+		02 Wsecondeapres PIC 9(2).
     77 WfinSeance PIC 9(2).
     77 reponse PIC 9(2).
+    77 Whorairecalcapres PIC 9(6).
+    77 Whorairecalcavant PIC 9(6).
+    77 Wcalcultesthoraire PIC 9(6).
+    
 
     *> variable de la fonction recherche_seances
     77 Wchoixcritere PIC 9(2).
@@ -438,50 +448,37 @@ PROCEDURE DIVISION.
           MOVE FUNCTION CONCATENATE(Wheure,Wminute) TO fsea_horaire
           MOVE 0 TO WfinSeance
           MOVE 1 TO Wseanceok
-          DISPLAY fsea_date
-          START fseances KEY = fsea_date
-          INVALID KEY
-            MOVE 1 TO WfinSeance
-            MOVE 1 TO Wseanceok
-          DISPLAY fsea_date
           START fseances KEY = fsea_date
             INVALID KEY
               MOVE 1 TO WfinSeance
               MOVE 1 TO Wseanceok
             NOT INVALID KEY
-              IF WnumsalleS = fsea_numsalle THEN
-                COMPUTE Wheureavant = WheureS - fsea_heure
-                IF Wheureavant < 3 AND >= 0 THEN
-                  DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
-                  MOVE 1 TO WfinSeance
-                  MOVE 0 TO Wseanceok
-                ELSE
-                  COMPUTE Wheureapres = Wheureapres - WheureS
-                  IF Wheureapres < 3 AND >= 0 THEN
-                    DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
-                    MOVE 1 TO WfinSeance
-                    MOVE 0 TO Wseanceok
-                  END-IF
-                END-IF
-              END-IF
             PERFORM WITH TEST AFTER UNTIL WfinSeance = 1
               READ fseances NEXT
                 AT END 
                   MOVE 1 TO WfinSeance
                 NOT AT END 
                   IF WnumsalleS = fsea_numsalle THEN
-                    COMPUTE Wheureavant = WheureS - fsea_heure
-                    IF Wheureavant < 3 AND >= 0 THEN
-                      DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
-                      MOVE 1 TO WfinSeance
-                      MOVE 0 TO Wseanceok 
-                    ELSE
-                      COMPUTE Wheureapres = Wheureapres - WheureS
-                      IF Wheureapres < 3 AND >= 0 THEN
-                        DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
-                        MOVE 1 TO WfinSeance
-                        MOVE 0 TO Wseanceok 
-                      END-IF
+					MOVE WheureS TO Wheureavant
+					MOVE WminuteS TO Wminuteavant
+					MOVE fsea_heure TO Wheureapres
+					MOVE fsea_minute TO Wminuteapres
+					MOVE 0 TO Wsecondeavant
+					MOVE 0 TO Wsecondeapres
+					MOVE FUNCTION SECONDS-FROM-FORMATTED-TIME("hhmmss",Whoraireavant) TO Whorairecalcavant
+					MOVE FUNCTION SECONDS-FROM-FORMATTED-TIME("hhmmss",Whoraireapres) TO Whorairecalcapres
+					COMPUTE Wcalcultesthoraire = Whorairecalcavant - Whorairecalcapres
+                    IF Wcalcultesthoraire <= 10800 AND >= 0
+						DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+						MOVE 1 TO WfinSeance
+						MOVE 0 TO Wseanceok 
+					END-IF
+                  ELSE
+					COMPUTE Wcalcultesthoraire = Whorairecalcapres - Whorairecalcavant
+					IF Wcalcultesthoraire <= 10800 AND >= 0
+						DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+						MOVE 1 TO WfinSeance
+						MOVE 0 TO Wseanceok 
                     END-IF
                   END-IF
               END-READ
@@ -621,11 +618,11 @@ PROCEDURE DIVISION.
             END-IF
             END-START
             CLOSE freservation
-          IF Wchoixsuppr = 0
+          IF Wchoixsuppr = 1
             DELETE fseances RECORD
         END-READ
         CLOSE fseances
-        IF fsea_stat = 00 THEN
+        IF fsea_stat = 00 AND Wchoixsuppr = 1
           DISPLAY "Suppression séance"
         ELSE
           DISPLAY "Erreur suppression séance"
