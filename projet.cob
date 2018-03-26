@@ -52,7 +52,7 @@ DATA DIVISION.
 			     03 fsea_jour PIC 9(2).
 			     03 fsea_mois PIC 9(2).
 			     03 fsea_annee PIC 9(4).
-		    02 fsea_horaire.
+		02 fsea_horaire.
 				 03 fsea_heure PIC 9(2).
 			     03 fsea_minute PIC 9(2).
         02 fsea_numsalle PIC 9(4).
@@ -510,7 +510,9 @@ PROCEDURE DIVISION.
         END-IF.
 
     RECHERCHE_SEANCE.
-
+	DISPLAY "--------DEBUT DE LA RECHERCHE DE LA SEANCE--------"
+	MOVE 0 TO Wfinseancerecherche
+	MOVE 0 TO Wfinfilmrecherche
       PERFORM WITH TEST AFTER UNTIL Wchoixcritere = 1 OR = 2
         DISPLAY "Par quel critère voulez vous chercher les séances : 1 par date, 2 par genre"
         ACCEPT Wchoixcritere
@@ -530,29 +532,35 @@ PROCEDURE DIVISION.
         END-PERFORM
         MOVE Wdaterecherche TO fsea_date
         OPEN INPUT fseances
+        OPEN INPUT ffilms
         START fseances KEY = fsea_date
           INVALID KEY
             DISPLAY "Pas de séance existante à cette date"
             MOVE 1 TO Wfinseancerecherche
           NOT INVALID KEY
+          DISPLAY "--------LISTE DES SEANCES--------"
           PERFORM WITH TEST AFTER UNTIL Wfinseancerecherche = 1
             READ fseances NEXT
               AT END 
                 MOVE 1 TO Wfinseancerecherche
               NOT AT END 
                 MOVE fsea_idfilm TO ff_id
-                OPEN INPUT ffilms
                 READ ffilms
                 INVALID KEY
                   DISPLAY "Erreur lors de la recherche du film de la séance, celui-ci n'existe pas"
                 NOT INVALID KEY
-                  MOVE ff_titre TO Wtitrerecherche
-                DISPLAY "La séance numéro ",fsea_id," se déroule dans la salle ",fsea_numsalle," avec le film ",Wtitrerecherche
-                CLOSE ffilms
+                	IF fsea_date = Wdaterecherche THEN
+                		MOVE ff_titre TO Wtitrerecherche
+                		DISPLAY "La séance numéro ",fsea_id," se déroule dans la salle ",fsea_numsalle," avec le film ",Wtitrerecherche
+                	ELSE
+                		MOVE 1 TO Wfinseancerecherche
+                	END-IF
             END-READ
           END-PERFORM
+          DISPLAY "--------FIN DE LA LISTE DES SEANCES--------"
         END-START
         CLOSE fseances
+        CLOSE ffilms
       ELSE
         DISPLAY "Veuillez saisir le genre dont vous voulez voir toutes les séances"
         ACCEPT Wgenrerecherche
@@ -564,32 +572,40 @@ PROCEDURE DIVISION.
             MOVE 1 TO Wfinfilmrecherche
             DISPLAY "Aucun film ne correspond à votre critère de recherche"
           NOT INVALID KEY
+          DISPLAY "--------LISTE DES SEANCES--------"
           PERFORM WITH TEST AFTER UNTIL Wfinfilmrecherche = 1
             READ ffilms NEXT
               AT END 
                 MOVE 1 TO Wfinfilmrecherche
               NOT AT END 
-                MOVE ff_id TO Widfilmrecherche
-                MOVE ff_titre TO Wtitrerecherche
-                START fseances KEY = fsea_idfilm
-                INVALID KEY
-                  DISPLAY "Erreur lors de la recherche du film dans la séance, celui-ci n'existe pas"
-                PERFORM WITH TEST AFTER UNTIL Wfinseancerecherche = 1
-                  READ fseances NEXT
-                    AT END 
-                      MOVE 1 TO Wfinseancerecherche
-                    NOT AT END
-                      DISPLAY "La séance numéro ",fsea_id," se déroule dans la salle ",fsea_numsalle," avec le film ",Wtitrerecherche
-                  END-READ
-                END-PERFORM
-                END-START
+              	IF Wgenrerecherche = ff_genre THEN
+                	MOVE ff_id TO fsea_idfilm
+                	MOVE ff_titre TO Wtitrerecherche
+                	START fseances KEY = fsea_idfilm
+                		INVALID KEY
+                  			DISPLAY "Erreur lors de la recherche du film dans la séance, celui-ci n'existe pas"
+                  		NOT INVALID KEY
+                			PERFORM WITH TEST AFTER UNTIL Wfinseancerecherche = 1
+                  				READ fseances NEXT
+                    				AT END 
+                      					MOVE 1 TO Wfinseancerecherche
+                    				NOT AT END
+                     					DISPLAY "La séance numéro ",fsea_id," se déroule dans la salle ",fsea_numsalle," avec le film ",Wtitrerecherche
+                  				END-READ
+                			END-PERFORM
+                	END-START
+                ELSE
+                	MOVE 1 TO Wfinfilmrecherche
+                END-IF
             END-READ
           END-PERFORM
+          DISPLAY "--------FIN DE LA LISTE DES SEANCES--------"
         END-START
         CLOSE fseances
         CLOSE ffilms
-      END-IF.
-
+      END-IF
+	DISPLAY "--------FIN DE LA RECHERCHE DES SEANCES--------".
+	
     SUPPRESSION_SEANCE.
       MOVE 0 TO Wchoixsuppr
         DISPLAY "Veuillez saisir l'id de la seance à supprimer"
