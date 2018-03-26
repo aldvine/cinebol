@@ -161,6 +161,7 @@ WORKING-STORAGE SECTION.
     77 Wheureavant PIC 9(2).
     77 Wheureapres PIC 9(2).
     77 WfinSeance PIC 9(2).
+    77 reponse PIC 9(2).
 
     *> variable de la fonction recherche_seances
     77 Wchoixcritere PIC 9(2).
@@ -174,7 +175,13 @@ WORKING-STORAGE SECTION.
     77 Wdaterechercheok PIC 9(2).
     77 Wgenrerecherche PIC A(20).
     77 Widfilmrecherche PIC 9(2).
- 		
+
+    *> variable de la fonction suppression_seance 
+ 		77 Wchoixsuppr PIC 9(2).
+    77 WidSeance PIC 9(2).
+    77 Wfinsupprreserv PIC 9(2).
+
+
 	*> variable de la fonction montant_journalier
 	77 WsommeI PIC 9(4).
 	77 WsommeS PIC 9(4).
@@ -296,7 +303,8 @@ PROCEDURE DIVISION.
     STOP RUN.
     
     AJOUT_SEANCE.
-        MOVE FUNCTION CURRENT-DATE to WdateActu
+      MOVE FUNCTION CURRENT-DATE to WdateActu
+      PERFORM WITH TEST AFTER UNTIL Wseanceok = 1
         MOVE 0 TO Wanneeok
         PERFORM WITH TEST AFTER UNTIL Wanneeok = 1   
 			PERFORM WITH TEST AFTER UNTIL WanneS >= Wannee
@@ -366,7 +374,7 @@ PROCEDURE DIVISION.
     MOVE 0 TO Widfilmok
     MOVE 0 TO WidSalleok
     MOVE 0 TO WidSeanceok
-    PERFORM WITH TEST AFTER UNTIL Wseanceok = 1
+    MOVE 1 TO reponse
       OPEN INPUT ffilms
       PERFORM WITH TEST AFTER UNTIL Widfilmok = 1
         DISPLAY "Veuillez saisir l'id du film"
@@ -375,115 +383,125 @@ PROCEDURE DIVISION.
         START ffilms 
           INVALID KEY
             DISPLAY "Ce film n'existe pas"
-             *> boucle infini si aucun film existe
+            DISPLAY "Voulez vous continuez ? 0 pour non 1 pour oui"
+            ACCEPT reponse
+            IF reponse = 0 THEN
+              MOVE 1 TO Widfilmok
+              MOVE 1 TO Wseanceok
+            END-IF
           NOT INVALID KEY
             MOVE 1 TO Widfilmok
         END-START
+      END-PERFORM
       CLOSE ffilms
-      END-PERFORM
-      OPEN INPUT fsalles
-      PERFORM WITH TEST AFTER UNTIL WidSalleok = 1
-        DISPLAY "Veuillez saisir l'id de la salle"
-        ACCEPT WnumsalleS
-        MOVE WnumsalleS TO fsal_num
-        START fsalles
-          INVALID KEY
-            DISPLAY "Cette salle n'existe pas"
-            *> boucle infini si aucune salle existe
-          NOT INVALID KEY
-            MOVE 1 TO WidSalleok
-        END-START
-      END-PERFORM
-      CLOSE fsalles
-      PERFORM WITH TEST AFTER UNTIL WtypedifS = 0 OR WtypedifS = 1
-        DISPLAY "Veuillez saisir si la séance est de type 3D (0 pour non 1 pour oui)"
-        ACCEPT WtypedifS
-      END-PERFORM
-      OPEN I-O fseances
-      PERFORM WITH TEST AFTER UNTIL WidSeanceok = 1
-        DISPLAY "Veuillez saisir l'id de la séance"
-        ACCEPT WidS
-        MOVE WidS TO fsea_id
-        START fseances 
-          INVALID KEY
-            MOVE 1 TO WidSeanceok
-          NOT INVALID KEY
-            DISPLAY "Ce numéro de séance est déja utilisé"
-        END-START
-      END-PERFORM
-      MOVE WnumsalleS TO fsea_numsalle
-      MOVE WjourS TO fsea_jour
-      MOVE WmoisS TO fsea_mois
-      MOVE WanneS TO fsea_annee
-      MOVE FUNCTION CONCATENATE(Wheure,Wminute) TO fsea_horaire
-      MOVE 0 TO WfinSeance
-      MOVE 1 TO Wseanceok
-      DISPLAY fsea_date
-      START fseances KEY = fsea_date
-        INVALID KEY
-          MOVE 1 TO WfinSeance
+      IF reponse = 1 THEN
+        OPEN INPUT fsalles
+          PERFORM WITH TEST AFTER UNTIL WidSalleok = 1
+            DISPLAY "Veuillez saisir l'id de la salle"
+            ACCEPT WnumsalleS
+            MOVE WnumsalleS TO fsal_num
+            START fsalles
+              INVALID KEY
+                DISPLAY "Cette salle n'existe pas"
+                DISPLAY "Voulez vous continuez ? 0 pour non 1 pour oui"
+                ACCEPT reponse
+                IF reponse = 0 THEN
+                  MOVE 1 TO WidSalleok
+                  MOVE 1 TO Wseanceok
+                END-IF
+              NOT INVALID KEY
+                MOVE 1 TO WidSalleok
+            END-START
+          END-PERFORM
+        CLOSE fsalles
+        IF reponse = 1 THEN
+          PERFORM WITH TEST AFTER UNTIL WtypedifS = 0 OR WtypedifS = 1
+            DISPLAY "Veuillez saisir si la séance est de type 3D (0 pour non 1 pour oui)"
+            ACCEPT WtypedifS
+          END-PERFORM
+          OPEN I-O fseances
+          PERFORM WITH TEST AFTER UNTIL WidSeanceok = 1
+            DISPLAY "Veuillez saisir l'id de la séance"
+            ACCEPT WidS
+            MOVE WidS TO fsea_id
+            START fseances 
+              INVALID KEY
+                MOVE 1 TO WidSeanceok
+              NOT INVALID KEY
+                DISPLAY "Ce numéro de séance est déja utilisé"
+            END-START
+          END-PERFORM
+          MOVE WnumsalleS TO fsea_numsalle
+          MOVE WjourS TO fsea_jour
+          MOVE WmoisS TO fsea_mois
+          MOVE WanneS TO fsea_annee
+          MOVE FUNCTION CONCATENATE(Wheure,Wminute) TO fsea_horaire
+          MOVE 0 TO WfinSeance
           MOVE 1 TO Wseanceok
-        NOT INVALID KEY
-          IF WnumsalleS = fsea_numsalle THEN
-            MOVE Wheure TO Wheureavant
-            SUBTRACT fsea_heure FROM Wheureavant GIVING Wheureavant
-            IF Wheureavant < 3 AND >= 0 THEN
-              DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+          DISPLAY fsea_date
+          START fseances KEY = fsea_date
+            INVALID KEY
               MOVE 1 TO WfinSeance
-              MOVE 0 TO Wseanceok
-            ELSE
-              MOVE fsea_heure TO Wheureapres
-              SUBTRACT Wheure FROM Wheureapres GIVING Wheureapres
-              IF Wheureapres < 3 AND >= 0 THEN
-                DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
-                MOVE 1 TO WfinSeance
-                MOVE 0 TO Wseanceok
-              END-IF
-            END-IF
-          END-IF
-        PERFORM WITH TEST AFTER UNTIL WfinSeance = 1
-          READ fseances NEXT
-            AT END 
-              MOVE 1 TO WfinSeance
-            NOT AT END 
+              MOVE 1 TO Wseanceok
+            NOT INVALID KEY
               IF WnumsalleS = fsea_numsalle THEN
-                MOVE Wheure TO Wheureavant
-                SUBTRACT fsea_heure FROM Wheureavant GIVING Wheureavant
-                IF Wheureavant < 3 AND >= 0 
+                COMPUTE Wheureavant = WheureS - fsea_heure
+                IF Wheureavant < 3 AND >= 0 THEN
                   DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
                   MOVE 1 TO WfinSeance
-                  MOVE 0 TO Wseanceok 
+                  MOVE 0 TO Wseanceok
                 ELSE
-                  MOVE fsea_heure TO Wheureapres
-                  SUBTRACT Wheure FROM Wheureapres GIVING Wheureapres
+                  COMPUTE Wheureapres = Wheureapres - WheureS
                   IF Wheureapres < 3 AND >= 0 THEN
                     DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
                     MOVE 1 TO WfinSeance
-                    MOVE 0 TO Wseanceok 
+                    MOVE 0 TO Wseanceok
                   END-IF
                 END-IF
               END-IF
-          END-READ
+            PERFORM WITH TEST AFTER UNTIL WfinSeance = 1
+              READ fseances NEXT
+                AT END 
+                  MOVE 1 TO WfinSeance
+                NOT AT END 
+                  IF WnumsalleS = fsea_numsalle THEN
+                    COMPUTE Wheureavant = WheureS - fsea_heure
+                    IF Wheureavant < 3 AND >= 0 THEN
+                      DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+                      MOVE 1 TO WfinSeance
+                      MOVE 0 TO Wseanceok 
+                    ELSE
+                      COMPUTE Wheureapres = Wheureapres - WheureS
+                      IF Wheureapres < 3 AND >= 0 THEN
+                        DISPLAY "Il y a déja une séance prévu dans ce créneau horaire"
+                        MOVE 1 TO WfinSeance
+                        MOVE 0 TO Wseanceok 
+                      END-IF
+                    END-IF
+                  END-IF
+              END-READ
+            END-PERFORM
+          END-START
         END-PERFORM
-      END-START
-    END-PERFORM
-    MOVE WidS  TO fsea_id
-    MOVE WjourS TO fsea_jour
-    MOVE WmoisS TO fsea_mois
-    MOVE WanneS TO fsea_annee
-    MOVE WminuteS TO fsea_minute
-    MOVE WheureS TO fsea_heure
-    MOVE WnumsalleS TO fsea_numsalle
-    MOVE WidfilmS TO fsea_idfilm
-    MOVE WtypedifS TO fsea_typedif
-    WRITE seaTampon
-    END-WRITE
-    CLOSE fseances
-    IF fsea_stat = 00 THEN
-      DISPLAY "Seance ajoutée"
-    ELSE 
-      DISPLAY "erreur enregistrement",   fsea_stat
-    END-IF.
+        IF reponse = 1 THEN
+          MOVE WidS  TO fsea_id
+          MOVE WjourS TO fsea_jour
+          MOVE WmoisS TO fsea_mois
+          MOVE WanneS TO fsea_annee
+          MOVE WminuteS TO fsea_minute
+          MOVE WheureS TO fsea_heure
+          MOVE WnumsalleS TO fsea_numsalle
+          MOVE WidfilmS TO fsea_idfilm
+          MOVE WtypedifS TO fsea_typedif
+          WRITE seaTampon
+          END-WRITE
+          CLOSE fseances
+          IF fsea_stat = 00 THEN
+            DISPLAY "Seance ajoutée"
+          ELSE 
+            DISPLAY "erreur enregistrement", fsea_stat
+          END-IF
+        END-IF.
 
     RECHERCHE_SEANCE.
 
@@ -567,7 +585,46 @@ PROCEDURE DIVISION.
       END-IF.
 
     SUPPRESSION_SEANCE.
-        DISPLAY "Suppression séance".
+      MOVE 0 TO Wchoixsuppr
+        DISPLAY "Veuillez saisir l'id de la seance à supprimer"
+        ACCEPT WidSeance
+        OPEN I-O fseances
+        MOVE WidSeance TO fsea_id
+        READ fseances
+          INVALID KEY 
+            DISPLAY "Il n'existe pas de séance possédant ce numéro"
+          NOT INVALID KEY
+            OPEN I-O freservation
+            MOVE WidSeance TO fr_idseance
+            START freservation KEY = fr_idseance
+            INVALID KEY 
+              DISPLAY "Cette séance ne possède pas de réservation celle-ci va être supprimer"
+            NOT INVALID KEY
+              DISPLAY "Cette séance possède des réservations voulez vous quand même la supprimer : 0 pour non 1 pour oui "
+              ACCEPT Wchoixsuppr
+            IF Wchoixsuppr = 1
+              READ freservation NEXT
+              AT END
+                MOVE 1 TO Wfinsupprreserv
+              NOT AT END
+                IF fr_idseance = WidSeance THEN
+                  DELETE freservation RECORD
+                ELSE
+                  MOVE 1 TO Wfinsupprreserv
+                END-IF
+              END-READ
+            END-IF
+            END-START
+            CLOSE freservation
+          IF Wchoixsuppr = 0
+            DELETE fseances RECORD
+        END-READ
+        CLOSE fseances
+        IF fsea_stat = 00 THEN
+          DISPLAY "Suppression séance"
+        ELSE
+          DISPLAY "Erreur suppression séance"
+        END-IF.
     
     AJOUT_SALLE.
     
