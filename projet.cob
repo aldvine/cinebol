@@ -6,7 +6,9 @@ IDENTIFICATION DIVISION.
 ENVIRONMENT DIVISION.
 INPUT-OUTPUT SECTION.
 FILE-CONTROL.
-	
+	  *> Fichier qui contient l'ensemble des séances
+    *> 1 cléf principal id
+    *> 2 cléfs secondaires : date et idfilm
     SELECT fseances ASSIGN TO "seances.dat"
     ORGANIZATION indexed
     ACCESS IS dynamic
@@ -15,12 +17,17 @@ FILE-CONTROL.
     ALTERNATE RECORD KEY fsea_idfilm WITH DUPLICATES
     FILE STATUS IS fsea_stat.
     
+    *> Fichier qui contient l'ensemble des salles
+    *> 1 cléf principal num
     SELECT fsalles ASSIGN TO "salles.dat"
     ORGANIZATION indexed
     ACCESS IS dynamic
     RECORD KEY fsal_num
     FILE STATUS IS fsal_stat.
     
+    *> Fichier qui contient l'ensemble des films
+    *> 1 cléf principal id
+    *> 2 cléfs secondaires : genre
     SELECT ffilms ASSIGN TO "films.dat"
     ORGANIZATION indexed
     ACCESS IS dynamic
@@ -28,12 +35,17 @@ FILE-CONTROL.
     ALTERNATE RECORD KEY ff_genre WITH DUPLICATES
     FILE STATUS IS ff_stat.
     
+    *> Fichier qui contient l'ensemble des clients
+    *> 1 cléf principal mail
     SELECT fclients ASSIGN TO "clients.dat"
     ORGANIZATION indexed
     ACCESS IS dynamic
     RECORD KEY fc_mail
     FILE STATUS IS fc_stat.
     
+    *> Fichier qui contient l'ensemble des réservation
+    *> 1 cléf principal num
+    *> 2 cléfs secondaires : idseance
     SELECT freservation ASSIGN TO "reservation.dat"
     ORGANIZATION indexed
     ACCESS IS dynamic
@@ -44,6 +56,7 @@ FILE-CONTROL.
     
 DATA DIVISION.
 
+    *> Liste des différents types de tampon
     FILE SECTION.
     FD fseances.
     01 seaTampon.
@@ -203,6 +216,7 @@ WORKING-STORAGE SECTION.
 	77 WsommeE PIC 9(9).
 	77 Wi PIC 9(9).
 	77 Wcompt PIC 9(3).
+  *> tableau de cellule contenant le itre du film et le nombre de place vendu
 	01 Wtab.
          02 Wcellule OCCURS 999.
 			03 WtitlefilmT PIC A(50).
@@ -224,13 +238,12 @@ WORKING-STORAGE SECTION.
            02 WmoisNow PIC 9(2).
            02 WjoursNow PIC 9(2).
 
-
     *> variables Andy
     77 Wtrouve PIC 9(2).
 
     
 PROCEDURE DIVISION.
-    
+    *> Création de chaque fichier s'ils ne sont pas déjà créés
     OPEN INPUT fsalles
     IF fsal_stat = 35 THEN
         OPEN OUTPUT fsalles
@@ -318,9 +331,9 @@ PROCEDURE DIVISION.
     
     AJOUT_SEANCE.
     DISPLAY "--------------DEBUT AJOUT SEANCE--------------"
+      *> Vérification sur la date, la date de la séance est supérieur à la date actuel
       MOVE FUNCTION CURRENT-DATE to WdateActu
       PERFORM WITH TEST AFTER UNTIL Wseanceok = 1
-		DISPLAY "--------DEBUT DE L'AJOUT DE LA SEANCE--------"
         MOVE 0 TO Wanneeok
         PERFORM WITH TEST AFTER UNTIL Wanneeok = 1   
 			PERFORM WITH TEST AFTER UNTIL WanneS >= Wannee
@@ -356,6 +369,9 @@ PROCEDURE DIVISION.
         		DISPLAY "La date saisie n'est pas correcte"
         	END-IF
     END-PERFORM
+
+    *> Vérification de l'horaire par rapport à la date actuel, seulement des heures entre 10h et 22h
+
 		PERFORM WITH TEST AFTER UNTIL WheureS < 23 AND > 9
 			DISPLAY "Veuillez saisir l'heure de début de la séance"
 			ACCEPT WheureS
@@ -391,6 +407,9 @@ PROCEDURE DIVISION.
     MOVE 0 TO WidSalleok
     MOVE 0 TO WidSeanceok
     MOVE 1 TO reponse
+
+      *> Vérification si le film saisi existe
+
       OPEN INPUT ffilms
       PERFORM WITH TEST AFTER UNTIL Widfilmok = 1
         DISPLAY "Veuillez saisir l'id du film"
@@ -410,6 +429,9 @@ PROCEDURE DIVISION.
         END-START
       END-PERFORM
       CLOSE ffilms
+
+      *> Vérification si la salle existe
+
       IF reponse = 1 THEN
         OPEN INPUT fsalles
           PERFORM WITH TEST AFTER UNTIL WidSalleok = 1
@@ -430,6 +452,10 @@ PROCEDURE DIVISION.
             END-START
           END-PERFORM
         CLOSE fsalles
+
+        *> Vérification de la saisi du type de film (3D ou non)
+        *> Vérification si l'id séance est déjà utilisé
+
         IF reponse = 1 THEN
           PERFORM WITH TEST AFTER UNTIL WtypedifS = 0 OR WtypedifS = 1
             DISPLAY "Veuillez saisir si la séance est de type 3D (0 pour non 1 pour oui)"
@@ -491,6 +517,9 @@ PROCEDURE DIVISION.
             END-PERFORM
           END-START
         END-PERFORM
+
+        *> Ecriture dans le fichier
+
         IF reponse = 1 THEN
           MOVE WidS  TO fsea_id
           MOVE WjourS TO fsea_jour
@@ -508,23 +537,30 @@ PROCEDURE DIVISION.
             DISPLAY "--------Seance ajoutée--------"
             DISPLAY "La séance numéro ", fsea_id," au ", fsea_jour,"/",fsea_mois,"/",fsea_annee," a été ajoutée"
             DISPLAY "Celle-ci se déroule à ", fsea_heure, "h", fsea_minute, " dans la salle numéro ", fsea_numsalle
-            DISPLAY "--------FIN DE L'AJOUT DE LA SEANCE--------"
           ELSE 
             DISPLAY "erreur enregistrement", fsea_stat
           END-IF
         END-IF
         DISPLAY "--------------FIN AJOUT SEANCE--------------".
 
-    RECHERCHE_SEANCE.
+  
+  RECHERCHE_SEANCE.
 	DISPLAY "--------DEBUT RECHERCHE SEANCE--------"
 	MOVE 0 TO Wfinseancerecherche
 	MOVE 0 TO Wfinfilmrecherche
+
+      *> Choix du critère de recherche
+
       PERFORM WITH TEST AFTER UNTIL Wchoixcritere = 1 OR = 2
         DISPLAY "Par quel critère voulez vous chercher les séances : 1 par date, 2 par genre"
         ACCEPT Wchoixcritere
       END-PERFORM
       MOVE FUNCTION CURRENT-DATE to WdateActu
       IF Wchoixcritere = 1 THEN
+
+        *> Dans le cas où le choix du critère est la date
+        *> Vérification du saisi de la date
+
         MOVE 0 TO Wdaterechercheok
         PERFORM WITH TEST AFTER UNTIL Wdaterechercheok = 1
           DISPLAY "Veuillez saisir la date au format ddmmyyyy"
@@ -536,6 +572,9 @@ PROCEDURE DIVISION.
             DISPLAY "La date saisie n'existe pas"
           END-IF
         END-PERFORM
+
+        *> Recherche de chaque séance, tout en recherchant le nom du film diffusé grâce à fsea_idfilm
+
         MOVE Wdaterecherche TO fsea_date
         OPEN INPUT fseances
         OPEN INPUT ffilms
@@ -556,8 +595,7 @@ PROCEDURE DIVISION.
                   DISPLAY "Erreur lors de la recherche du film de la séance, celui-ci n'existe pas"
                 NOT INVALID KEY
                 	IF fsea_date = Wdaterecherche THEN
-                		MOVE ff_titre TO Wtitrerecherche
-                		DISPLAY "La séance numéro ",fsea_id," se déroule dans la salle ",fsea_numsalle," avec le film ",Wtitrerecherche
+                		DISPLAY "La séance numéro ",fsea_id," se déroule dans la salle ",fsea_numsalle," avec le film ",ff_titre
                 	ELSE
                 		MOVE 1 TO Wfinseancerecherche
                 	END-IF
@@ -568,11 +606,17 @@ PROCEDURE DIVISION.
         CLOSE fseances
         CLOSE ffilms
       ELSE
+
+        *> Dans le cas où le choix du critère est le genre
+
         DISPLAY "Veuillez saisir le genre dont vous voulez voir toutes les séances"
         ACCEPT Wgenrerecherche
         OPEN INPUT ffilms
         OPEN INPUT fseances
         MOVE Wgenrerecherche TO ff_genre
+
+        *> Recherche des films selon leur genre, puis on regarde les séances disponible pour chaque film qui correspond au genre
+
         START ffilms KEY = ff_genre
           INVALID KEY
             MOVE 1 TO Wfinfilmrecherche
@@ -596,8 +640,12 @@ PROCEDURE DIVISION.
                     				AT END 
                       					MOVE 1 TO Wfinseancerecherche
                     				NOT AT END
-                     					DISPLAY "La séance numéro ",fsea_id," se déroule dans la salle ",fsea_numsalle," avec le film ",Wtitrerecherche
-                  				END-READ
+                              IF ff_id <> fsea_idfilm THEN
+                                MOVE 1 TO Wfinseancerecherche
+                              ELSE
+                     					  DISPLAY "La séance numéro ",fsea_id," se déroule dans la salle ",fsea_numsalle," avec le film ",ff_titre
+                  				    END-IF
+                          END-READ
                 			END-PERFORM
                 	END-START
                 ELSE
@@ -924,7 +972,7 @@ PROCEDURE DIVISION.
                      DISPLAY "Client ",Wcpt
                      
                      DISPLAY "Email : ", fc_mail
-                     DISPLAY "Prenom: ", fc_mail
+                     DISPLAY "Prenom: ", fc_prenom
                      DISPLAY "date de debut d'abonnement : ", fc_jour,"/",fc_mois,"/",fc_annee
                      DISPLAY "Durée de l'abonnement (en mois) :",fc_duree
                      DISPLAY "-----------------------------"              
@@ -1159,12 +1207,17 @@ PROCEDURE DIVISION.
                                    MOVE 1 TO Wfin
                                 NOT AT END
                                 *> affichage de toutes les reservation
-                                 DISPLAY "--- RESERVATION ",fr_num,"---"
-                                 DISPLAY "nombre de place reserver : ",fr_place
-                                 DISPLAY "dont abonne : ",fr_placeAbonne
-                                 DISPLAY "montant total à payer : ", fr_montant," €"
+                                IF fr_idseance <> fsea_id THEN
+                                    MOVE 1 TO Wfin
+                                ELSE
+                                  DISPLAY "--- RESERVATION ",fr_num,"---"
+                                  DISPLAY "nombre de place reserver : ",fr_place
+                                  DISPLAY "dont abonne : ",fr_placeAbonne
+                                  DISPLAY "montant total à payer : ", fr_montant," €"
+                                END-IF
                              END-READ
                           END-PERFORM
+                          MOVE 0 TO Wfin
                       END-START
                   END-IF
             END-READ
@@ -1178,6 +1231,10 @@ PROCEDURE DIVISION.
     
     MONTANT_JOURNALIER.
      DISPLAY "----------------- DEBUT MONTANT JOURNALIER ---------------"
+
+        *> Calcul du montant obtenu pour chaque séance et pour la journée entière
+        *> On calcul le montant des reservations pour chaque séances en fonction de la date saisie
+
        MOVE 0 TO WsommeS
         DISPLAY "Saisir la date du jour sous le format JJMMYYYY"
         ACCEPT fsea_date
@@ -1221,8 +1278,8 @@ PROCEDURE DIVISION.
 								END-READ
 							END-PERFORM
 					      COMPUTE WsommeS = WsommeS + WsommeI
+                DISPLAY "idseance: ",fsea_id," Horaire: ",fsea_heure,":",fsea_minute," Montant: ",WsommeI
 						END-START
-						DISPLAY "Horaire: ",fsea_heure,":",fsea_minute," Montant: ",WsommeI
 					END-IF
     
 				END-READ
@@ -1235,6 +1292,9 @@ PROCEDURE DIVISION.
     
     AFFICHE_STATISTIQUE.
 		DISPLAY "----------------- DEBUT AFFICHE STATISTIQUE ---------------"
+
+      *> On initialise le tableau
+      *> On calcul le nombre de place par film en fonction de chaque réservation sur chaque séance qi diffuse ce film
 		INITIALIZE Wtab.
         OPEN INPUT fseances
         OPEN INPUT freservation
@@ -1250,8 +1310,10 @@ PROCEDURE DIVISION.
 				  START fseances key = fsea_idfilm
 			   	INVALID KEY
 					 MOVE 1 TO Wfin
+           MOVE 0 TO WsommeP
 				  NOT INVALID KEY
 					 MOVE 0 TO Wfin
+           MOVE 0 TO WsommeP
 					 PERFORM WITH TEST AFTER UNTIL Wfin=1
 					 READ fseances NEXT
 					 AT END
@@ -1266,7 +1328,6 @@ PROCEDURE DIVISION.
 									  MOVE 0 TO WfinR
 								 NOT INVALID KEY
 									  MOVE 0 TO WfinR
-									  MOVE 0 TO WsommeP
 									  PERFORM WITH TEST AFTER UNTIL WfinR=1
 										 READ freservation NEXT
 										 AT END
@@ -1276,7 +1337,6 @@ PROCEDURE DIVISION.
 												  MOVE 1 TO WfinR
 											   ELSE
 												  COMPUTE WsommeP = WsommeP + fr_place
-                          DISPLAY WsommeP
 											   END-IF
 										 END-READ
 									  END-PERFORM
@@ -1284,15 +1344,17 @@ PROCEDURE DIVISION.
 							 END-IF
 						 END-READ
 					   END-PERFORM
-             MOVE WsommeP TO WnbplaceT(Wcompt)
 				    END-START
-				
-        
+
+        *> On rentre dans la case Wcompt du tableau le nombre de place du film et son titre
+				MOVE WsommeP TO WnbplaceT(Wcompt)
 				MOVE ff_titre TO WtitlefilmT(Wcompt)
 				COMPUTE Wcompt = Wcompt + 1
 			END-READ
 		END-PERFORM
 		
+    *> Tri par ordre décroissant du tableau en fonction du nombre de place par film
+
 		COMPUTE Wcompt = Wcompt - 1
 		SORT Wcellule ON DESCENDING KEY WnbplaceT
 		
